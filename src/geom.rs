@@ -1,9 +1,8 @@
+use num_traits::Float;
 use std::fmt::Display;
 
-use num_traits::Float;
-
-#[derive(PartialEq, Debug)]
-pub struct Point<T: Float>(T, T);
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct Point<T: Float>(pub T, pub T);
 
 impl<T: Float> Point<T> {
     fn slope(&self, other: &Self) -> T {
@@ -21,8 +20,8 @@ impl<T: Float> From<(T, T)> for Point<T> {
     }
 }
 
-#[derive(PartialEq, Debug)]
-pub struct Segment<T: Float>(Point<T>, Point<T>);
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct Segment<T: Float>(pub Point<T>, pub Point<T>);
 
 impl<T: Float + Display> Segment<T> {
     pub fn new(a: impl Into<Point<T>>, b: impl Into<Point<T>>) -> Self {
@@ -31,7 +30,7 @@ impl<T: Float + Display> Segment<T> {
 
     // Checks if line B intersects A, where A is orthogonal to X axis (vertical line).
     // If the two lines share a same point, the result is None since clipping is not needed.
-    fn isect(&self, b: &Self) -> Option<Point<T>> {
+    pub fn isect(&self, b: &Self) -> Option<Point<T>> {
         let a = self;
 
         if !a.is_ortho() {
