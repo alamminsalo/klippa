@@ -1,7 +1,7 @@
 use crate::geom::{CoordExt, LineExt};
 use geo_types::{Coord, CoordFloat, Line, Point};
 
-pub(crate) struct Rect<T: CoordFloat> {
+pub struct Rect<T: CoordFloat> {
     // bounding coordinates
     pub x0: T,
     pub y0: T,

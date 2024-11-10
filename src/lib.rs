@@ -1,6 +1,6 @@
-mod geom;
-mod rect;
-mod util;
+pub mod geom;
+pub mod rect;
+pub mod util;
 
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use rect::Rect;
@@ -68,12 +68,8 @@ impl<T: CoordFloat> ClipRect<T> {
         joined
     }
 
-    fn clip_polygon(&self, g: &Polygon<T>) -> Option<MultiPolygon<T>> {
+    fn clip_polygon(&self, g: &Polygon<T>) -> MultiPolygon<T> {
         let exteriors = self.clip_polygon_ring(g.exterior());
-
-        if exteriors.is_empty() {
-            return None;
-        }
 
         //let interiors = g
         //    .interiors()
@@ -81,7 +77,11 @@ impl<T: CoordFloat> ClipRect<T> {
         //    .filter_map(|ls| self.clip_polygon_ring(ls))
         //    .collect::<Vec<LineString<T>>>();
 
-        todo!("place inner rings to exteriors")
+        // TODO: place inner rings to exteriors
+        exteriors
+            .into_iter()
+            .map(|ls| Polygon::new(ls, vec![]))
+            .collect()
     }
 
     pub fn clip(&self, g: &Geometry<T>) -> Option<Geometry<T>> {
@@ -91,7 +91,14 @@ impl<T: CoordFloat> ClipRect<T> {
             Point(g) => self.inner.clip_point(g).and_then(|p| Some(Point(p))),
             Line(g) => self.inner.clip_segment(g).and_then(|l| Some(Line(l))),
             LineString(g) => Some(MultiLineString(self.clip_linestring(g))),
-            Polygon(g) => self.clip_polygon(g).and_then(|p| Some(MultiPolygon(p))),
+            Polygon(g) => {
+                let g = self.clip_polygon(g);
+                if g.0.is_empty() {
+                    None
+                } else {
+                    Some(MultiPolygon(g))
+                }
+            }
             MultiPoint(g) => Some(MultiPoint(
                 g.into_iter()
                     .filter_map(|p| self.inner.clip_point(p))
@@ -106,7 +113,7 @@ impl<T: CoordFloat> ClipRect<T> {
             MultiPolygon(g) => {
                 let polys: Vec<_> = g
                     .into_iter()
-                    .filter_map(|poly| self.clip_polygon(poly))
+                    .map(|poly| self.clip_polygon(poly))
                     .flatten()
                     .collect();
 
