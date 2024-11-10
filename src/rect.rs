@@ -200,6 +200,26 @@ impl<T: CoordFloat> Rect<T> {
 
         f
     }
+
+    // Returns corner nodes between given perimeter indexes
+    pub fn corner_nodes_between(&self, a: f64, mut b: f64) -> Vec<Coord<T>> {
+        // wrap around if b point is before a
+        if b < a {
+            b += 4.0;
+        }
+
+        // truncate to indexes
+        let i = a as usize;
+        let j = b as usize;
+
+        let mut res = Vec::with_capacity(4);
+
+        for i in i..j {
+            res.push(self.lines[i % 4].end);
+        }
+
+        res
+    }
 }
 
 #[cfg(test)]
@@ -387,11 +407,17 @@ mod tests {
     fn test_perimeter_index() {
         let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
+        // test perimeter index for coordinates
         assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 0.0,);
         assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 0.0}), 0.75);
         assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 4.0}), 2.0,);
         assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 4.0}), 2.5);
         assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 3.0,);
         assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 1.0}), 3.75,);
+
+        // test finding corner nodes between indexes
+        assert_eq!(rect.corner_nodes_between(0.1, 1.1).len(), 1);
+        assert_eq!(rect.corner_nodes_between(1.1, 0.1).len(), 3);
+        assert_eq!(rect.corner_nodes_between(3.9, 0.1).len(), 1);
     }
 }
