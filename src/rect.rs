@@ -172,10 +172,40 @@ impl<T: CoordFloat> Rect<T> {
 
         groups
     }
+
+    // Indexes a point along the rect perimeter in 0..4
+    // Can be used to sort intersection points.
+    pub fn perimeter_index(&self, p: &Coord<T>) -> f64 {
+        let mut f: f64 = 0.0;
+        let corners = self.corner_points();
+
+        for i in 0..4 {
+            let c1 = corners[i];
+            let c2 = corners[(i + 1) % 4];
+
+            if i % 2 == 0 {
+                if p.y == c1.y {
+                    f += (p.x - c1.x).to_f64().unwrap() / (c2.x - c1.x).to_f64().unwrap();
+                    break;
+                }
+            } else {
+                if p.x == c1.x {
+                    f += (p.y - c1.y).to_f64().unwrap() / (c2.y - c1.y).to_f64().unwrap();
+                    break;
+                }
+            }
+
+            f += 1.0;
+        }
+
+        f
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use geo_types::coord;
+
     use super::*;
 
     #[test]
@@ -351,5 +381,17 @@ mod tests {
                 vec![Line::new((0.0, 0.0), (4.0, 4.0))],
             ]
         );
+    }
+
+    #[test]
+    fn test_perimeter_index() {
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
+
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 0.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 0.0}), 0.75);
+        assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 4.0}), 2.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 4.0}), 2.5);
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 3.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 1.0}), 3.75,);
     }
 }
