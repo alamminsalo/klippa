@@ -3,13 +3,13 @@ use geo_types::{Coord, CoordFloat, Line, Point};
 
 pub(crate) struct Rect<T: CoordFloat> {
     // bounding coordinates
-    x0: T,
-    y0: T,
-    x1: T,
-    y1: T,
+    pub x0: T,
+    pub y0: T,
+    pub x1: T,
+    pub y1: T,
 
     // rect lines
-    lines: [Line<T>; 4],
+    pub lines: [Line<T>; 4],
 }
 
 impl<T: CoordFloat> Rect<T> {

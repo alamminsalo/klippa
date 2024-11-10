@@ -94,18 +94,6 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
     }
 }
 
-pub fn coords_to_lines<T: CoordFloat>(coords: Vec<Coord<T>>) -> Vec<Line<T>> {
-    let mut lines = vec![];
-
-    if coords.len() > 1 {
-        for i in 0..coords.len() - 1 {
-            lines.push(Line::new(coords[i], coords[i + 1]));
-        }
-    }
-
-    lines
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

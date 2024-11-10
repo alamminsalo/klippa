@@ -1,5 +1,6 @@
 mod geom;
 mod rect;
+mod util;
 
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use rect::Rect;
@@ -16,24 +17,11 @@ impl<T: CoordFloat> ClipRect<T> {
         }
     }
 
-    fn segments_to_linestring(mut segments: Vec<Line<T>>) -> LineString<T> {
-        // Take last segment aside, this doubles as empty checking
-        if let Some(last) = segments.pop() {
-            segments
-                .into_iter()
-                .map(|seg| seg.start)
-                .chain([last.start, last.end])
-                .collect()
-        } else {
-            LineString::new(vec![])
-        }
-    }
-
     fn clip_linestring(&self, g: &LineString<T>) -> MultiLineString<T> {
         self.inner
             .clip_segments(&g.lines().collect::<Vec<Line<T>>>())
             .into_iter()
-            .map(Self::segments_to_linestring)
+            .map(util::segments_to_linestring)
             .collect()
     }
 
@@ -49,7 +37,7 @@ impl<T: CoordFloat> ClipRect<T> {
         }
         // return on single group
         if groups.len() == 1 {
-            return Some(Self::segments_to_linestring(groups.pop().unwrap()));
+            return Some(util::segments_to_linestring(groups.pop().unwrap()));
         }
 
         // add perimeter index of first segment start point for each group
@@ -72,7 +60,7 @@ impl<T: CoordFloat> ClipRect<T> {
                 b.extend(self.inner.corner_nodes_between(*a_idx, *c_idx));
                 b.push(c.first().unwrap().start);
 
-                geom::coords_to_lines(b)
+                util::coords_to_lines(b)
             };
 
             // append b to a
@@ -88,7 +76,7 @@ impl<T: CoordFloat> ClipRect<T> {
                 acc
             });
 
-        Some(Self::segments_to_linestring(segments))
+        Some(util::segments_to_linestring(segments))
     }
 
     fn clip_polygon(&self, g: &Polygon<T>) -> Option<MultiPolygon<T>> {
@@ -141,5 +129,25 @@ impl<T: CoordFloat> ClipRect<T> {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lines_to_poly<T: CoordFloat>(lines: &[Line<T>]) -> Polygon<T> {
+        Polygon::new(util::segments_to_linestring(lines.to_vec()), vec![])
+    }
+
+    #[test]
+    fn test_poly_simple() {
+        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let ls = util::segments_to_linestring(Rect::new(1.0, 1.0, 5.0, 5.0).lines.to_vec());
+
+        let clip = rect.clip_polygon_ring(&ls).unwrap();
+
+        assert_eq!(clip.0.len(), 4);
+        assert_eq!(clip, LineString::new(vec![]));
     }
 }
