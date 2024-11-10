@@ -1,6 +1,6 @@
 pub mod geom;
 pub mod rect;
-pub mod util;
+mod util;
 
 #[cfg(test)]
 mod tests;

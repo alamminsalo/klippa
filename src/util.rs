@@ -1,7 +1,7 @@
 use geo_types::{Coord, CoordFloat, Line, LineString};
 
 #[inline]
-pub fn coords_to_lines<T: CoordFloat>(coords: Vec<Coord<T>>) -> Vec<Line<T>> {
+pub(crate) fn coords_to_lines<T: CoordFloat>(coords: Vec<Coord<T>>) -> Vec<Line<T>> {
     let mut lines = vec![];
 
     if coords.len() > 1 {
@@ -14,7 +14,7 @@ pub fn coords_to_lines<T: CoordFloat>(coords: Vec<Coord<T>>) -> Vec<Line<T>> {
 }
 
 #[inline]
-pub fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) -> LineString<T> {
+pub(crate) fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) -> LineString<T> {
     // Take last segment aside, this doubles as empty checking
     if let Some(last) = segments.pop() {
         segments
@@ -27,7 +27,7 @@ pub fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) -> Line
     }
 }
 
-pub fn print_queue<T: CoordFloat>(queue: &Vec<(f64, LineString<T>)>) {
+pub(crate) fn print_queue<T: CoordFloat>(queue: &Vec<(f64, LineString<T>)>) {
     for (p_idx, ls) in queue.into_iter().rev() {
         println!("p_idx={p_idx}, {ls:?}");
     }
