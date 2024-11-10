@@ -1,8 +1,7 @@
 use num_traits::Float;
-use std::fmt::Display;
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct Point<T: Float>(pub T, pub T);
+pub struct Point<T: Float>(pub T, pub T);
 
 impl<T: Float> Point<T> {
     fn slope(&self, other: &Self) -> T {
@@ -11,6 +10,10 @@ impl<T: Float> Point<T> {
 
     fn yx(&self) -> Self {
         Self(self.1, self.0)
+    }
+
+    pub fn dist_manhattan(&self, other: &Self) -> T {
+        (self.0 - other.0).abs() + (self.1 - other.1).abs()
     }
 }
 
@@ -21,9 +24,9 @@ impl<T: Float> From<(T, T)> for Point<T> {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct Segment<T: Float>(pub Point<T>, pub Point<T>);
+pub struct Segment<T: Float>(pub Point<T>, pub Point<T>);
 
-impl<T: Float + Display> Segment<T> {
+impl<T: Float + std::fmt::Debug> Segment<T> {
     pub fn new(a: impl Into<Point<T>>, b: impl Into<Point<T>>) -> Self {
         Self(a.into(), b.into())
     }
@@ -32,6 +35,8 @@ impl<T: Float + Display> Segment<T> {
     // If the two lines share a same point, the result is None since clipping is not needed.
     pub fn isect(&self, b: &Self) -> Option<Point<T>> {
         let a = self;
+
+        println!("isect {self:?} -> {b:?}");
 
         if !a.is_ortho() {
             panic!("non-orthogonal A");
@@ -50,7 +55,7 @@ impl<T: Float + Display> Segment<T> {
         let diff_a = b.0 .0 - a.0 .0;
         let diff_b = b.0 .0 - b.1 .0;
 
-        println!("diff_a={diff_a}, diff_b={diff_b}");
+        println!("diff_a={diff_a:?}, diff_b={diff_b:?}");
 
         // Check diff signatures
         if diff_a.is_sign_positive() != diff_b.is_sign_positive() {
@@ -62,7 +67,7 @@ impl<T: Float + Display> Segment<T> {
         let slope_b = b.0.slope(&a.1);
         let slope_c = b.0.slope(&b.1);
 
-        println!("slope_a={slope_a}, slope_b={slope_b}, slope_c={slope_c}");
+        println!("slope_a={slope_a:?}, slope_b={slope_b:?}, slope_c={slope_c:?}");
 
         if slope_c < slope_a.min(slope_b) || slope_c > slope_a.max(slope_b) {
             return None;
@@ -73,7 +78,7 @@ impl<T: Float + Display> Segment<T> {
             return None;
         }
 
-        Some(Point(b.0 .0 + diff_a, b.0 .1 + diff_a * slope_c))
+        Some(Point(b.0 .0 - diff_a, b.0 .1 + diff_a * slope_c))
     }
 
     fn is_vertical(&self) -> bool {
@@ -88,6 +93,7 @@ impl<T: Float + Display> Segment<T> {
         Self(self.0.yx(), self.1.yx())
     }
 
+    #[allow(dead_code)]
     fn reverse(self) -> Self {
         Self(self.1, self.0)
     }
@@ -100,22 +106,20 @@ mod tests {
     #[test]
     fn test_horizontal() {
         //  |
-        //  |
         // -x-
         //  |
-        let a = Segment::<f32>::new((0.0, 0.0), (0.0, 4.0));
-        let b = Segment::<f32>::new((1.0, 1.0), (-1.0, 1.0));
-        assert!(a.isect(&b).is_some());
-        assert!(a.isect(&b.reverse()).is_some());
+        let a = Segment::<f32>::new((0.0, -4.0), (0.0, 4.0));
+        let b = Segment::<f32>::new((1.0, 0.0), (-1.0, 0.0));
+        assert_eq!(a.isect(&b), Some(Point(0.0, 0.0)));
+        assert_eq!(a.isect(&b.reverse()), Some(Point(0.0, 0.0)));
 
-        //  |
         //  |/
         //  x
         // /|
         let a = Segment::new((0.0, 0.0), (0.0, 4.0));
-        let b = Segment::new((1.0, 1.0), (-1.0, 1.0));
-        assert!(a.isect(&b).is_some());
-        assert!(a.isect(&b.reverse()).is_some());
+        let b = Segment::new((-1.0, 0.0), (1.0, 4.0));
+        assert_eq!(a.isect(&b), Some(Point(0.0, 2.0)));
+        assert_eq!(a.isect(&b.reverse()), Some(Point(0.0, 2.0)));
 
         //   /
         // -x---
