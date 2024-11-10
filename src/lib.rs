@@ -1,13 +1,16 @@
 mod geom;
 
-use geom::{Point, Segment};
+pub use geom::{Point, Segment};
 use num_traits::Float;
 
 pub struct Rect<T: Float> {
+    // node coordinates
     x0: T,
     y0: T,
     x1: T,
     y1: T,
+
+    // side segments
     sides: [Segment<T>; 4],
 }
 
@@ -19,6 +22,7 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
             Segment::new((x1, y1), (x0, y1)),
             Segment::new((x0, y1), (x0, y0)),
         ];
+
         Self {
             x0,
             y0,
@@ -36,8 +40,16 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
         self.contains_point(&s.0) && self.contains_point(&s.1)
     }
 
+    // Segment is crossing when both points are outside the rectangle.
     fn is_crossing(&self, s: &Segment<T>) -> bool {
         !self.contains_point(&s.0) && !self.contains_point(&s.1)
+    }
+
+    fn is_corner(&self, p: &Point<T>) -> bool {
+        p == &self.sides[0].0
+            || p == &self.sides[1].0
+            || p == &self.sides[2].0
+            || p == &self.sides[3].0
     }
 
     // Clips segment to this rectangle.
@@ -47,31 +59,21 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
             return Some(seg.clone());
         }
 
-        // Find intersection points
+        // Find unique intersection points
         let mut isects = self
             .sides
             .iter()
             .filter_map(|side| side.isect(&seg))
-            .take(2);
+            .fold(vec![], |mut acc, p| {
+                if !acc.contains(&p) {
+                    acc.push(p);
+                }
+                acc
+            })
+            .into_iter();
 
         let p1 = isects.next();
-        let mut p2 = isects.next();
-
-        // Line is crossing when both points are outside the rectangle.
-        let is_crossing = self.is_crossing(seg);
-
-        // Set p2 to None incase theyre the same point!
-        // This fixes segments crossing corner point.
-        if p1 == p2 {
-            if is_crossing {
-                // Segment is crossing rectangle by touching the corner point.
-                // This would produce a segment with same point twice and does not qualify as
-                // segment. Therefore let's return None.
-                return None;
-            } else {
-                p2 = None;
-            }
-        }
+        let p2 = isects.next();
 
         match (p1, p2) {
             // Two intersections:
@@ -89,6 +91,14 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
             // Single intersection:
             // Clip from edge to inside point.
             (Some(p1), None) => {
+                if self.is_crossing(seg) && self.is_corner(&p1) {
+                    // Segment is crossing rectangle by touching the corner point.
+                    // This would produce a segment with same point twice and does not qualify as
+                    // segment. Therefore let's return None.
+                    return None;
+                }
+
+                // Decide segment direction
                 if self.contains_point(&seg.0) {
                     Some(Segment(seg.0.clone(), p1))
                 } else {
@@ -314,5 +324,22 @@ mod tests {
         // corner-crossing rectangle should produce no segments
         let segments = Rect::new(-1.0, 4.0, 0.0, 5.0).sides;
         assert!(rect.clip_segments(&segments).is_empty(),);
+    }
+
+    #[test]
+    fn test_self_crossing_segments() {
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
+
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((-1.0, -1.0), (5.0, 5.0)),
+                Segment::new((5.0, 5.0), (5.0, -1.0)),
+                Segment::new((5.0, -1.0), (-1.0, 5.0)),
+            ]),
+            vec![
+                vec![Segment::new((4.0, 0.0), (0.0, 4.0))],
+                vec![Segment::new((0.0, 0.0), (4.0, 4.0))],
+            ]
+        );
     }
 }
