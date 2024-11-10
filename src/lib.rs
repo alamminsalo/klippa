@@ -26,71 +26,60 @@ impl<T: CoordFloat> ClipRect<T> {
     }
 
     // Clips and sews polygon ring back together by using corner points when necessary.
-    fn clip_polygon_ring(&self, g: &LineString<T>) -> Option<LineString<T>> {
-        let mut groups: Vec<Vec<Line<T>>> = self
+    fn clip_polygon_ring(&self, g: &LineString<T>) -> Vec<LineString<T>> {
+        let linestrings: Vec<LineString<T>> = self
             .inner
-            .clip_segments(&g.lines().collect::<Vec<Line<T>>>());
-
-        // return on empty
-        if groups.is_empty() {
-            return None;
-        }
-        // return on single group
-        if groups.len() == 1 {
-            return Some(util::segments_to_linestring(groups.pop().unwrap()));
-        }
-
-        // add perimeter index of first segment start point for each group
-        let mut groups: Vec<(f64, Vec<Line<T>>)> = groups
+            .clip_segments(&g.lines().collect::<Vec<Line<T>>>())
             .into_iter()
-            .map(|g| (self.inner.perimeter_index(&g[0].end), g))
+            .map(util::segments_to_linestring)
+            .collect();
+
+        // return on empty or single
+        if linestrings.len() < 2 {
+            return linestrings;
+        }
+
+        // add perimeter index of first coordinate
+        let mut linestrings: Vec<(f64, LineString<T>)> = linestrings
+            .into_iter()
+            .map(|g| (self.inner.perimeter_index(&g[0]), g))
             .collect();
 
         // sort by perimeter index
-        groups.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        linestrings.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
-        for i in 0..groups.len() {
-            let b = {
-                // connect last point of A to first point of B
-                let (a_idx, a) = &groups[i];
-                let (c_idx, c) = &groups[(i + 1) % groups.len()];
+        let mut joined = vec![];
 
-                // create a new segment, including rect corner nodes
-                let mut b = vec![a.last().unwrap().end];
-                b.extend(self.inner.corner_nodes_between(*a_idx, *c_idx));
-                b.push(c.first().unwrap().start);
+        while !linestrings.is_empty() {
+            // connect last point of A to first point of B
+            let (a_idx, mut a) = linestrings.pop().unwrap();
+            let (c_idx, mut c) = linestrings.pop().unwrap();
 
-                util::coords_to_lines(b)
-            };
+            // create a new segment passed from corner nodes
+            let mut b = self.inner.corner_nodes_between(a_idx, c_idx);
 
-            // append b to a
-            groups.get_mut(i).unwrap().1.extend(b);
+            // join a-b-c
+            a.0.extend(b.drain(..));
+            a.0.extend(c.0.drain(..));
+
+            joined.push(a);
         }
 
-        // fold into single segment list
-        let segments = groups
-            .into_iter()
-            .map(|(_, g)| g)
-            .fold(vec![], |mut acc, g| {
-                acc.extend(g);
-                acc
-            });
-
-        Some(util::segments_to_linestring(segments))
+        joined
     }
 
     fn clip_polygon(&self, g: &Polygon<T>) -> Option<MultiPolygon<T>> {
         let exteriors = self.clip_polygon_ring(g.exterior());
 
-        if exteriors.is_none() {
+        if exteriors.is_empty() {
             return None;
         }
 
-        let interiors = g
-            .interiors()
-            .into_iter()
-            .filter_map(|ls| self.clip_polygon_ring(ls))
-            .collect::<Vec<LineString<T>>>();
+        //let interiors = g
+        //    .interiors()
+        //    .into_iter()
+        //    .filter_map(|ls| self.clip_polygon_ring(ls))
+        //    .collect::<Vec<LineString<T>>>();
 
         todo!("place inner rings to exteriors")
     }
@@ -145,9 +134,9 @@ mod tests {
         let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
         let ls = util::segments_to_linestring(Rect::new(1.0, 1.0, 5.0, 5.0).lines.to_vec());
 
-        let clip = rect.clip_polygon_ring(&ls).unwrap();
+        let clip = rect.clip_polygon_ring(&ls);
+        println!("{clip:?}");
 
-        assert_eq!(clip.0.len(), 4);
-        assert_eq!(clip, LineString::new(vec![]));
+        assert_eq!(clip.len(), 1);
     }
 }
