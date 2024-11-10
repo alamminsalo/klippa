@@ -26,3 +26,9 @@ pub fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) -> Line
         LineString::new(vec![])
     }
 }
+
+pub fn print_queue<T: CoordFloat>(queue: &Vec<(f64, LineString<T>)>) {
+    for (p_idx, ls) in queue.into_iter().rev() {
+        println!("p_idx={p_idx}, {ls:?}");
+    }
+}

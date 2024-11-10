@@ -37,15 +37,16 @@ impl<T: CoordFloat> ClipRect<T> {
 
         // sort elements with starting point perimeter index
         queue.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-        //println!("{queue:?}");
 
+        // begin connect loop
         let mut output = vec![];
 
-        // connect loop
         while !queue.is_empty() {
-            //println!("pop");
-            let (a_idx, mut a) = queue.pop().unwrap();
-            //println!("a={a:?}");
+            println!("step");
+            util::print_queue(&queue);
+
+            // pop last element of the vector, containing the smallest perimeter index
+            let (p_a, mut a) = queue.pop().unwrap();
 
             if a.is_closed() {
                 output.push(a);
@@ -53,27 +54,21 @@ impl<T: CoordFloat> ClipRect<T> {
             }
 
             // Check if head point of a is closer than next in queue
-            let tail_idx = self.inner.perimeter_index(&a.0.last().unwrap());
-            //println!("tail_idx={tail_idx}");
+            let p_tail = self.inner.perimeter_index(&a.0.last().unwrap());
+            println!("p_tail={p_tail}");
 
-            // Process ring
-            if queue.is_empty()
-                || self
-                    .inner
-                    .is_index_closer(tail_idx, a_idx, queue.last().unwrap().0)
+            // Find next value with greater perimeter index than the p_tail
+            if let Some(next) = queue
+                .iter()
+                .enumerate()
+                .rev()
+                .find(|(_, (p_idx, _))| self.inner.is_index_closer(p_tail, *p_idx, p_a))
+                .map(|(idx, _)| idx)
             {
-                // Close line
-                //println!("close line {a_idx} -> {tail_idx}");
-
-                let corners = self.inner.corner_nodes_between(tail_idx, a_idx);
-                a.0.extend(corners);
-                a.0.push(a[0].clone());
-
-                queue.push((a_idx, a));
-            } else if let Some((b_idx, b)) = queue.pop() {
-                //println!("join {b_idx}, {b:?}");
+                let (p_b, b) = queue.remove(next);
+                println!("join lines {p_b}, {b:?}");
                 // create a new segment passed from corner nodes
-                let corners = self.inner.corner_nodes_between(tail_idx, b_idx);
+                let corners = self.inner.corner_nodes_between(p_tail, p_b);
 
                 // connect last point of C to first point of A
                 //println!("connect: {a:?} -> {corners:?} -> {b:?}");
@@ -82,7 +77,16 @@ impl<T: CoordFloat> ClipRect<T> {
                 a.0.extend(corners);
                 a.0.extend(b);
 
-                queue.push((a_idx, a));
+                queue.push((p_a, a));
+            } else {
+                // Close line with self
+                println!("close line {p_a} -> {p_tail}");
+
+                let corners = self.inner.corner_nodes_between(p_tail, p_a);
+                a.0.extend(corners);
+                a.0.push(a[0].clone());
+
+                queue.push((p_a, a));
             }
         }
 
@@ -203,22 +207,45 @@ mod tests {
         );
     }
 
-    //#[test]
-    //fn test_poly_concave() {
-    //    let rect = ClipRect::new(0., 0., 4., 4.);
-    //    let g = wkt!(POLYGON((5.053710937499999 2.339437582871412,3.1091308593749996 4.5764249358536375,1.7907714843749991 4.642129714308481,4.504394531249999 1.6257583604127603,0.5053710937499998 -0.46142079353060694,4.361572265624999 -0.8239462091017487,5.504150390624999 2.054003264372156,5.053710937499999 2.339437582871412)));
+    #[test]
+    fn test_poly_concave_1() {
+        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let g = wkt!(POLYGON((3.7353515625000004 4.740675384778385,3.790283203125001 2.756504385543252,0.5712890625000011 2.7784514150468738,0.5603027343750014 4.718777551249872,2.13134765625 3.1624555302378496,3.7353515625000004 4.740675384778385)));
 
-    //    let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
-    //    println!("{clip}");
-    //}
+        let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+        println!("{}", clip.to_wkt());
 
-    //#[test]
-    //fn test_poly_complex() {
-    //    let bbox = wkt!(POLYGON((7.407106969698674 43.75241501165641,7.407106969698674 43.723294553130074,7.442523770497758 43.723294553130074,7.442523770497758 43.75241501165641,7.407106969698674 43.75241501165641))).bounding_rect().unwrap();
-    //    let rect = ClipRect::new(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y);
-    //    let g = wkt!(POLYGON((7.451820373535156 43.74803313328718,7.448129653930664 43.73544519409995,7.420148849487305 43.72161401320187,7.407960891723633 43.720807612655534,7.444267272949218 43.742452600140325,7.399034500122071 43.73947610307701,7.400150299072266 43.7479711302214,7.425727844238281 43.74685506405493,7.4221229553222665 43.75534904410739,7.42924690246582 43.74790912709145,7.446842193603515 43.74803313328718,7.446413040161132 43.75541103953009,7.437829971313477 43.75528704862043,7.438516616821289 43.751009204912606,7.4335384368896475 43.75045120275473,7.433023452758789 43.7571468852893,7.453279495239258 43.75720887884938,7.451820373535156 43.74803313328718)));
+        assert_eq!(
+            clip.to_wkt().to_string(),
+            "MULTIPOLYGON(((1.2858799649243433 4,2.13134765625 3.1624555302378496,2.982575447670533 4,3.755857110697265 4,3.790283203125001 2.756504385543252,0.5712890625000011 2.7784514150468738,0.5643725275296553 4,1.2858799649243433 4)))"
+        );
+    }
 
-    //    let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
-    //    println!("{clip}");
-    //}
+    #[test]
+    fn test_poly_concave_2() {
+        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let g = wkt!(POLYGON((3.735351562499999 5.189423479732426,2.065429687499999 2.6467632307409588,5.284423828124999 2.668712251961324,-0.12084960937499983 -1.417091829441631,2.6257324218750004 1.7575368113083272,-0.8349609375000002 1.691648704756986,1.8566894531249996 5.145656780300527,3.735351562499999 5.189423479732426)));
+
+        let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+        println!("{}", clip.to_wkt());
+
+        assert_eq!(
+            clip.to_wkt().to_string(),
+            "MULTIPOLYGON(((2.954183772492809 4,2.065429687499999 2.6467632307409588,4 2.6599542845255755,4 1.6978262866378853,1.7538777812611581 0,1.1051706266347496 0,2.6257324218750004 1.7575368113083272,0 1.7075455177661985,0 2.763096107782738,0.96389839625035 4,2.954183772492809 4)))"
+        );
+    }
+
+    #[test]
+    fn test_poly_concave_3() {
+        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let g = wkt!(POLYGON((1.2414550781249996 4.434044005032575,1.2414550781249996 0.9337965488500259,4.39453125 0.99970513084196,4.361572265624999 4.193029605360763,2.515869140625 4.160158150193411,2.559814453125 2.910124912012904,3.62548828125 2.9430409100551316,3.6584472656249996 2.4052990502867857,2.17529296875 2.3723687086440606,2.0654296875 4.488809196778661,4.757080078125001 4.477856485570598,4.801025390624999 0.41747677467076016,0.4174804687500001 0.37353251022881295,0.5493164062499997 4.412136788910175,1.2414550781249996 4.434044005032575)));
+
+        let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+        println!("{}", clip.to_wkt());
+
+        assert_eq!(
+            clip.to_wkt().to_string(),
+            "MULTIPOLYGON(((1.2414550781249996 4,1.2414550781249996 0.9337965488500259,4 0.991458265298099,4 0.4094466364566678,0.4174804687500001 0.37353251022881295,0.5358626395041394 4,1.2414550781249996 4)),((2.5214995508770635 4,2.559814453125 2.910124912012904,3.62548828125 2.9430409100551316,3.6584472656249996 2.4052990502867857,2.17529296875 2.3723687086440606,2.0908035085756933 4,2.5214995508770635 4)))"
+        );
+    }
 }
