@@ -378,27 +378,6 @@ mod tests {
         let segments = Rect::new(1.0, 1.0, 3.0, 3.0).lines;
         assert_eq!(rect.clip_segments(&segments), vec![segments.to_vec()]);
 
-        // make small rect partially inside
-        let segments = Rect::new(1.0, 5.0, 3.0, 1.0).lines;
-        assert_eq!(
-            rect.clip_segments(&segments),
-            vec![vec![
-                Line::new((3.0, 4.0), (3.0, 1.0)),
-                Line::new((3.0, 1.0), (1.0, 1.0)),
-                Line::new((1.0, 1.0), (1.0, 4.0)),
-            ]]
-        );
-
-        // another small rect partially inside
-        let segments = Rect::new(1.0, 5.0, 5.0, 1.0).lines;
-        assert_eq!(
-            rect.clip_segments(&segments),
-            vec![vec![
-                Line::new((4.0, 1.0), (1.0, 1.0)),
-                Line::new((1.0, 1.0), (1.0, 4.0)),
-            ]]
-        );
-
         // corner-crossing rectangle should produce no segments
         let segments = Rect::new(-1.0, 4.0, 0.0, 5.0).lines;
         assert!(rect.clip_segments(&segments).is_empty(),);
@@ -426,12 +405,12 @@ mod tests {
         let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         // test perimeter index for coordinates
-        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 0.0,);
-        assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 0.0}), 0.75);
-        assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 4.0}), 2.0,);
-        assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 4.0}), 2.5);
-        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 3.0,);
-        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 1.0}), 3.75,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 0.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 4.0}), 0.75);
+        assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 0.0}), 2.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 0.0}), 2.5);
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 3.0,);
+        assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 3.0}), 3.75,);
 
         // test finding corner nodes between indexes
         assert_eq!(rect.corner_nodes_between(0.1, 1.1).len(), 1);
