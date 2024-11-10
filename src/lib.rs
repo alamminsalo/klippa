@@ -30,13 +30,21 @@ impl<T: CoordFloat> ClipRect<T> {
 
     // Clips and sews polygon ring back together by using corner points when necessary.
     fn clip_polygon_ring(&self, g: &LineString<T>) -> Vec<LineString<T>> {
+        let input_lines = g.lines().collect::<Vec<Line<T>>>();
+
         let mut queue: Vec<(f64, LineString<T>)> = self
             .inner
-            .clip_segments(&g.lines().collect::<Vec<Line<T>>>())
+            .clip_segments(&input_lines)
             .into_iter()
             .map(util::segments_to_linestring)
             .map(|g| (self.inner.perimeter_index(&g[0]), g))
             .collect();
+
+        // When no intersections are found, check if clipping rectangle is fully contained by the
+        // subject polygon. In that case, bounds of the clipping rectangle.
+        if queue.is_empty() && self.inner.is_contained(&input_lines) {
+            return vec![util::segments_to_linestring(self.inner.lines.to_vec())];
+        }
 
         // sort elements with starting point perimeter index
         queue.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());

@@ -238,4 +238,15 @@ impl<T: CoordFloat> Rect<T> {
             })
             .collect()
     }
+
+    pub fn is_contained(&self, lines: &[Line<T>]) -> bool {
+        let isect = Line::new((self.x0, self.y0), (self.x0, self.y0 + T::infinity()));
+
+        lines
+            .into_iter()
+            .filter_map(|l| isect.intersection(l))
+            .count()
+            % 2
+            == 1
+    }
 }
