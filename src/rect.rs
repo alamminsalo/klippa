@@ -1,7 +1,7 @@
 use crate::geom::{CoordExt, LineExt};
-use geo_types::{Coord, CoordFloat, Line, Rect};
+use geo_types::{Coord, CoordFloat, Line, Point};
 
-pub struct ClipRect<T: CoordFloat> {
+pub(crate) struct Rect<T: CoordFloat> {
     // bounding coordinates
     x0: T,
     y0: T,
@@ -12,16 +12,7 @@ pub struct ClipRect<T: CoordFloat> {
     lines: [Line<T>; 4],
 }
 
-impl<T: CoordFloat> Into<ClipRect<T>> for Rect<T> {
-    fn into(self) -> ClipRect<T> {
-        let (x0, y0) = self.min().x_y();
-        let (x1, y1) = self.max().x_y();
-
-        ClipRect::new(x0, y0, x1, y1)
-    }
-}
-
-impl<T: CoordFloat> ClipRect<T> {
+impl<T: CoordFloat> Rect<T> {
     pub fn new(x0: T, y0: T, x1: T, y1: T) -> Self {
         let lines = [
             Line::new((x0, y0), (x1, y0)),
@@ -65,7 +56,14 @@ impl<T: CoordFloat> ClipRect<T> {
         self.corner_points().into_iter().any(|corner| p == corner)
     }
 
-    // Clips segment to this rectangle.
+    pub fn clip_point(&self, p: &Point<T>) -> Option<Point<T>> {
+        if self.contains_coord(&p.0) {
+            Some(*p)
+        } else {
+            None
+        }
+    }
+
     pub fn clip_segment(&self, seg: &Line<T>) -> Option<Line<T>> {
         // Check if fully inside rect
         if self.contains_segment(&seg) {
@@ -124,7 +122,6 @@ impl<T: CoordFloat> ClipRect<T> {
         }
     }
 
-    // Clips segments to this rectangle.
     // Returns vector of grouped continuous segments.
     pub fn clip_segments(&self, segments: &[Line<T>]) -> Vec<Vec<Line<T>>> {
         // Get clipped segments
@@ -183,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_clip_single() {
-        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         // should be contained fully
         assert!(rect
@@ -238,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_clip_multi() {
-        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         assert_eq!(
             rect.clip_segments(&vec![
@@ -303,18 +300,18 @@ mod tests {
 
     #[test]
     fn test_another_rect() {
-        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         // make another larger rectangle and tests against it's segments
-        let segments = ClipRect::new(-1.0, -1.0, 5.0, 5.0).lines;
+        let segments = Rect::new(-1.0, -1.0, 5.0, 5.0).lines;
         assert!(rect.clip_segments(&segments).is_empty(),);
 
         // make small rect fully inside
-        let segments = ClipRect::new(1.0, 1.0, 3.0, 3.0).lines;
+        let segments = Rect::new(1.0, 1.0, 3.0, 3.0).lines;
         assert_eq!(rect.clip_segments(&segments), vec![segments.to_vec()]);
 
         // make small rect partially inside
-        let segments = ClipRect::new(1.0, 5.0, 3.0, 1.0).lines;
+        let segments = Rect::new(1.0, 5.0, 3.0, 1.0).lines;
         assert_eq!(
             rect.clip_segments(&segments),
             vec![vec![
@@ -325,7 +322,7 @@ mod tests {
         );
 
         // another small rect partially inside
-        let segments = ClipRect::new(1.0, 5.0, 5.0, 1.0).lines;
+        let segments = Rect::new(1.0, 5.0, 5.0, 1.0).lines;
         assert_eq!(
             rect.clip_segments(&segments),
             vec![vec![
@@ -335,13 +332,13 @@ mod tests {
         );
 
         // corner-crossing rectangle should produce no segments
-        let segments = ClipRect::new(-1.0, 4.0, 0.0, 5.0).lines;
+        let segments = Rect::new(-1.0, 4.0, 0.0, 5.0).lines;
         assert!(rect.clip_segments(&segments).is_empty(),);
     }
 
     #[test]
     fn test_self_crossing_segments() {
-        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         assert_eq!(
             rect.clip_segments(&vec![
