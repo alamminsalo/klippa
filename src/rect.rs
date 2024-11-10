@@ -14,6 +14,7 @@ pub struct Rect<T: CoordFloat> {
 
 impl<T: CoordFloat> Rect<T> {
     pub fn new(x0: T, y0: T, x1: T, y1: T) -> Self {
+        // clockwise
         let lines = [
             Line::new((x0, y1), (x1, y1)),
             Line::new((x1, y1), (x1, y0)),
@@ -204,7 +205,6 @@ impl<T: CoordFloat> Rect<T> {
     // Returns true if perimeter index a is closer to i than b
     pub fn is_index_closer(&self, i: f64, mut a: f64, mut b: f64) -> bool {
         println!("is_index_closer: i={i} -> a={a} b={b}");
-
         // wrap points around
         if a < i {
             a += 4.0;

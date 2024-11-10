@@ -36,7 +36,7 @@ impl<T: CoordFloat> ClipRect<T> {
             .collect();
 
         // sort elements with starting point perimeter index
-        queue.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        queue.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
         println!("{queue:?}");
 
         let mut output = vec![];
@@ -52,35 +52,37 @@ impl<T: CoordFloat> ClipRect<T> {
                 continue;
             }
 
-            // Check if ending point of a is closer than next in queue
-            let tail_index = self.inner.perimeter_index(a.0.last().unwrap());
+            // Check if head point of a is closer than next in queue
+            let tail_idx = self.inner.perimeter_index(&a.0.last().unwrap());
+            println!("tail_idx={tail_idx}");
 
             // Process ring
             if queue.is_empty()
                 || self
                     .inner
-                    .is_index_closer(a_idx, tail_index, queue.last().unwrap().0)
+                    .is_index_closer(tail_idx, a_idx, queue.last().unwrap().0)
             {
                 // Close line
-                println!("close line {a_idx} -> {tail_index}");
+                println!("close line {a_idx} -> {tail_idx}");
 
-                let corners = self.inner.corner_nodes_between(a_idx, tail_index);
+                let corners = self.inner.corner_nodes_between(tail_idx, a_idx);
                 a.0.extend(corners);
                 a.0.push(a[0].clone());
 
                 queue.push((a_idx, a));
-            } else if let Some((c_idx, mut c)) = queue.pop() {
+            } else if let Some((b_idx, b)) = queue.pop() {
+                println!("join {b_idx}, {b:?}");
                 // create a new segment passed from corner nodes
-                let corners = self.inner.corner_nodes_between(a_idx, c_idx);
+                let corners = self.inner.corner_nodes_between(tail_idx, b_idx);
 
                 // connect last point of C to first point of A
-                println!("connect: {c:?} -> {corners:?} -> {a:?}");
+                println!("connect: {a:?} -> {corners:?} -> {b:?}");
 
                 // join C-B-A and push back into queue
-                c.0.extend(corners);
-                c.0.extend(a);
+                a.0.extend(corners);
+                a.0.extend(b);
 
-                queue.push((c_idx, c));
+                queue.push((a_idx, a));
             }
         }
 
@@ -159,32 +161,48 @@ mod tests {
     }
 
     #[test]
-    fn test_poly_simple_1() {
+    fn test_poly_diagonal() {
         let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
-        let g = wkt!(POLYGON((1.8347167968749998 2.7345569512697807,1.8347167968749998 1.4610232806227543,5.592041015624999 1.417091829441631,5.581054687499999 2.7126091154394203,1.8347167968749998 2.7345569512697807)));
+        let g = wkt!(POLYGON((0.2526855468749994 4.937724274302482,5.174560546875 0.0549316322096729,3.3508300781249996 -1.0436434559084802,-1.3073730468750009 4.039617826768435,0.2526855468749994 4.937724274302482)));
 
-        let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
-        println!("{clip}");
+        let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+        assert_eq!(
+            clip.to_wkt().to_string(),
+            "MULTIPOLYGON(((1.1979154595268593 4,4 1.2201655310741821,4 0,2.3944552358035858 0,0 2.612947796960526,0 4,1.1979154595268593 4)))"
+        );
     }
 
     #[test]
-    fn test_poly_simple_2() {
+    fn test_poly_angle() {
         let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
-        let g = wkt!(POLYGON((0.2526855468749994 4.937724274302482,5.174560546875 0.0549316322096729,3.3508300781249996 -1.0436434559084802,-1.3073730468750009 4.039617826768435,0.2526855468749994 4.937724274302482)));
+        let g = wkt!(POLYGON((2.7465820312500004 4.423090477960912,2.7026367187499996 3.19536379832941,4.746093749999999 3.217302058187144,4.7900390625 1.5159363834516881,1.109619140625 1.603794430058997,1.1755371093750002 4.543570279371764,2.7465820312500004 4.423090477960912)));
+
+        let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+        println!("{}", clip.to_wkt());
+        assert_eq!(
+            clip.to_wkt().to_string(),
+            "MULTIPOLYGON(((2.731437908719937 4,2.7026367187499996 3.19536379832941,4 3.209292103333472,4 1.5347959946504444,1.109619140625 1.603794430058997,1.1633487485863934 4,2.731437908719937 4)))"
+        );
+    }
+
+    #[test]
+    fn test_poly_cross() {
+        let rect = ClipRect::new(0.0, 0.0, 4.0, 4.0);
+        let g = wkt!(POLYGON((1.3732910156250002 4.532618393971788,2.867431640625 4.5764249358536375,2.933349609374999 2.8223442468940902,4.812011718749999 2.8113711933311407,4.822998046874999 1.537901237431484,3.021240234375 1.5488835798473986,3.0322265624999996 -0.3515602939922644,1.417236328125 -0.37353251022881295,1.3952636718749996 1.4939713066293194,-0.7690429687499999 1.482988685660274,-0.7360839843749998 2.8333171968552904,1.3293457031250002 2.7126091154394203,1.109619140625 4.4449973697272895,1.3732910156250002 4.532618393971788)));
 
         let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
         println!("{clip}");
     }
 
     //#[test]
-    // fn test_poly_star() {
-    //     let bbox = wkt!(POLYGON((7.407106969698674 43.75241501165641,7.407106969698674 43.723294553130074,7.442523770497758 43.723294553130074,7.442523770497758 43.75241501165641,7.407106969698674 43.75241501165641))).bounding_rect().unwrap();
-    //     let rect = ClipRect::new(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y);
-    //     let g = wkt!(POLYGON((7.4501895904541025 43.74815713922604,7.434310913085938 43.74648303737507,7.4274444580078125 43.75671292857024,7.417831420898437 43.746421032703665,7.399291992187499 43.74691706827676,7.4180030822753915 43.734142842434494,7.400150299072266 43.72024932899603,7.427873611450195 43.72626611210518,7.435512542724609 43.71907071307564,7.4362850189208975 43.73662348786766,7.4501895904541025 43.74815713922604)));
+    //fn test_poly_star() {
+    //    let bbox = wkt!(POLYGON((7.407106969698674 43.75241501165641,7.407106969698674 43.723294553130074,7.442523770497758 43.723294553130074,7.442523770497758 43.75241501165641,7.407106969698674 43.75241501165641))).bounding_rect().unwrap();
+    //    let rect = ClipRect::new(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y);
+    //    let g = wkt!(POLYGON((7.4501895904541025 43.74815713922604,7.434310913085938 43.74648303737507,7.4274444580078125 43.75671292857024,7.417831420898437 43.746421032703665,7.399291992187499 43.74691706827676,7.4180030822753915 43.734142842434494,7.400150299072266 43.72024932899603,7.427873611450195 43.72626611210518,7.435512542724609 43.71907071307564,7.4362850189208975 43.73662348786766,7.4501895904541025 43.74815713922604)));
 
-    //     let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
-    //     println!("{clip}");
-    // }
+    //    let clip = rect.clip(&Geometry::Polygon(g)).unwrap().to_wkt();
+    //    println!("{clip}");
+    //}
     //#[test]
     //fn test_poly_concave() {
     //    let rect = ClipRect::new(0., 0., 4., 4.);
