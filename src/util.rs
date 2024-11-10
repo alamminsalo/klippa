@@ -1,17 +1,4 @@
-use geo_types::{Coord, CoordFloat, Line, LineString};
-
-#[inline]
-pub(crate) fn coords_to_lines<T: CoordFloat>(coords: Vec<Coord<T>>) -> Vec<Line<T>> {
-    let mut lines = vec![];
-
-    if coords.len() > 1 {
-        for i in 0..coords.len() - 1 {
-            lines.push(Line::new(coords[i], coords[i + 1]));
-        }
-    }
-
-    lines
-}
+use geo_types::{CoordFloat, Line, LineString};
 
 #[inline]
 pub(crate) fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) -> LineString<T> {
