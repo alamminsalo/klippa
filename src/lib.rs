@@ -89,22 +89,31 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
             .into_iter()
             .filter_map(|seg| self.clip_segment(seg))
             .collect();
-        let seg_len = segments.len();
 
-        // Find beginning of first continuous string of segments
-        // since we must assume first and last segments are connected.
-        let mut i = 1;
-        while i < seg_len {
-            if segments[i - 1].1 != segments[i].0 {
-                break;
-            }
-            i += 1
+        // Early return on empty segments list
+        if segments.is_empty() {
+            return vec![];
         }
 
-        // Group segments, starting from i and looping around to beginning.
-        let groups = segments.into_iter().cycle().skip(i).take(seg_len).fold(
-            vec![],
-            |mut acc: Vec<Vec<Segment<T>>>, seg: Segment<T>| {
+        // Find first splitpoint
+        // since we must assume first and last segments are connected.
+        let seg_len = segments.len();
+        let mut offset = 0;
+        for i in 0..seg_len {
+            // Check if we found a split point
+            if segments[i].1 != segments[(i + 1) % seg_len].0 {
+                offset = (i + 1) % seg_len;
+                break;
+            }
+        }
+
+        // Group segments, starting from offset and looping around
+        let groups = segments
+            .into_iter()
+            .cycle()
+            .skip(offset)
+            .take(seg_len)
+            .fold(vec![], |mut acc: Vec<Vec<Segment<T>>>, seg: Segment<T>| {
                 if let Some(segs) = acc.last_mut() {
                     if let Some(last) = segs.last() {
                         if last.1 == seg.0 {
@@ -120,8 +129,7 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
                 }
 
                 acc
-            },
-        );
+            });
 
         groups
     }
@@ -156,5 +164,44 @@ mod tests {
         // should be left out
         let seg = Segment::new((5.0, 5.0), (6.0, 6.0));
         assert!(rect.clip_segment(&seg).is_none());
+    }
+
+    #[test]
+    fn test_clip_multi() {
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
+
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((-1.0, 2.0), (1.0, 2.0)),
+                Segment::new((1.0, 2.0), (5.0, 2.0)),
+            ]),
+            vec![vec![
+                Segment::new((0.0, 2.0), (1.0, 2.0)),
+                Segment::new((1.0, 2.0), (4.0, 2.0)),
+            ]]
+        );
+
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((-1.0, 2.0), (1.0, 2.0)),
+                Segment::new((1.0, 2.0), (5.0, 2.0)),
+                Segment::new((5.0, 2.0), (7.0, 7.0)),
+            ]),
+            vec![vec![
+                Segment::new((0.0, 2.0), (1.0, 2.0)),
+                Segment::new((1.0, 2.0), (4.0, 2.0)),
+            ]]
+        );
+
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((1.0, 2.0), (5.0, 2.0)),
+                Segment::new((5.0, 2.0), (3.0, 4.0)),
+            ]),
+            vec![
+                vec![Segment::new((4.0, 3.0), (3.0, 4.0)),],
+                vec![Segment::new((1.0, 2.0), (4.0, 2.0)),],
+            ]
+        );
     }
 }

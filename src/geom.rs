@@ -36,15 +36,12 @@ impl<T: Float + std::fmt::Debug> Segment<T> {
     pub fn isect(&self, b: &Self) -> Option<Point<T>> {
         let a = self;
 
-        println!("isect {self:?} -> {b:?}");
-
         if !a.is_ortho() {
             panic!("non-orthogonal A");
         }
 
         // If A is not vertical line, invert axes
         if !a.is_vertical() {
-            println!("invert!");
             return a
                 .swap_axes()
                 .isect(&b.swap_axes())
@@ -55,7 +52,7 @@ impl<T: Float + std::fmt::Debug> Segment<T> {
         let diff_a = b.0 .0 - a.0 .0;
         let diff_b = b.0 .0 - b.1 .0;
 
-        println!("diff_a={diff_a:?}, diff_b={diff_b:?}");
+        // println!("diff_a={diff_a:?}, diff_b={diff_b:?}");
 
         // Check diff signatures
         if diff_a.is_sign_positive() != diff_b.is_sign_positive() {
@@ -67,7 +64,7 @@ impl<T: Float + std::fmt::Debug> Segment<T> {
         let slope_b = b.0.slope(&a.1);
         let slope_c = b.0.slope(&b.1);
 
-        println!("slope_a={slope_a:?}, slope_b={slope_b:?}, slope_c={slope_c:?}");
+        // println!("slope_a={slope_a:?}, slope_b={slope_b:?}, slope_c={slope_c:?}");
 
         if slope_c < slope_a.min(slope_b) || slope_c > slope_a.max(slope_b) {
             return None;
