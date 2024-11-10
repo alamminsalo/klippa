@@ -101,7 +101,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_horizontal() {
+    fn test_isect() {
         //  |
         // -x-
         //  |
