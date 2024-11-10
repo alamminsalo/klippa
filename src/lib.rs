@@ -190,6 +190,12 @@ mod tests {
             Some(Segment::new((0.0, 0.0), (4.0, 4.0)))
         );
 
+        // should be clipped twice
+        assert_eq!(
+            rect.clip_segment(&Segment::new((-1.0, -1.0), (5.0, 5.0))),
+            Some(Segment::new((0.0, 0.0), (4.0, 4.0)))
+        );
+
         // should be left out
         assert!(rect
             .clip_segment(&Segment::new((5.0, 5.0), (6.0, 6.0)))
@@ -244,5 +250,51 @@ mod tests {
                 vec![Segment::new((1.0, 2.0), (4.0, 2.0)),],
             ]
         );
+
+        // non-clipping segments
+        assert!(rect
+            .clip_segments(&vec![
+                Segment::new((5.0, 2.0), (5.0, 4.0)),
+                Segment::new((5.0, 4.0), (7.0, 0.0))
+            ])
+            .is_empty(),);
+    }
+
+    #[test]
+    fn test_another_rect() {
+        let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
+
+        // make another larger rectangle and tests against it's segments
+        let segments = Rect::new(-1.0, -1.0, 5.0, 5.0).sides;
+        assert!(rect.clip_segments(&segments).is_empty(),);
+
+        // make small rect fully inside
+        let segments = Rect::new(1.0, 1.0, 3.0, 3.0).sides;
+        assert_eq!(rect.clip_segments(&segments), vec![segments.to_vec()]);
+
+        // make small rect partially inside
+        let segments = Rect::new(1.0, 5.0, 3.0, 1.0).sides;
+        assert_eq!(
+            rect.clip_segments(&segments),
+            vec![vec![
+                Segment::new((3.0, 4.0), (3.0, 1.0)),
+                Segment::new((3.0, 1.0), (1.0, 1.0)),
+                Segment::new((1.0, 1.0), (1.0, 4.0)),
+            ]]
+        );
+
+        // another small rect partially inside
+        let segments = Rect::new(1.0, 5.0, 5.0, 1.0).sides;
+        assert_eq!(
+            rect.clip_segments(&segments),
+            vec![vec![
+                Segment::new((4.0, 1.0), (1.0, 1.0)),
+                Segment::new((1.0, 1.0), (1.0, 4.0)),
+            ]]
+        );
+
+        // corner-crossing rectangle should produce no segments
+        let segments = Rect::new(-1.0, 4.0, 0.0, 5.0).sides;
+        assert!(rect.clip_segments(&segments).is_empty(),);
     }
 }
