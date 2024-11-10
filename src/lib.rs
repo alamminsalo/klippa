@@ -37,15 +37,15 @@ impl<T: CoordFloat> ClipRect<T> {
 
         // sort elements with starting point perimeter index
         queue.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-        println!("{queue:?}");
+        //println!("{queue:?}");
 
         let mut output = vec![];
 
         // connect loop
         while !queue.is_empty() {
-            println!("pop");
+            //println!("pop");
             let (a_idx, mut a) = queue.pop().unwrap();
-            println!("a={a:?}");
+            //println!("a={a:?}");
 
             if a.is_closed() {
                 output.push(a);
@@ -54,7 +54,7 @@ impl<T: CoordFloat> ClipRect<T> {
 
             // Check if head point of a is closer than next in queue
             let tail_idx = self.inner.perimeter_index(&a.0.last().unwrap());
-            println!("tail_idx={tail_idx}");
+            //println!("tail_idx={tail_idx}");
 
             // Process ring
             if queue.is_empty()
@@ -63,7 +63,7 @@ impl<T: CoordFloat> ClipRect<T> {
                     .is_index_closer(tail_idx, a_idx, queue.last().unwrap().0)
             {
                 // Close line
-                println!("close line {a_idx} -> {tail_idx}");
+                //println!("close line {a_idx} -> {tail_idx}");
 
                 let corners = self.inner.corner_nodes_between(tail_idx, a_idx);
                 a.0.extend(corners);
@@ -71,12 +71,12 @@ impl<T: CoordFloat> ClipRect<T> {
 
                 queue.push((a_idx, a));
             } else if let Some((b_idx, b)) = queue.pop() {
-                println!("join {b_idx}, {b:?}");
+                //println!("join {b_idx}, {b:?}");
                 // create a new segment passed from corner nodes
                 let corners = self.inner.corner_nodes_between(tail_idx, b_idx);
 
                 // connect last point of C to first point of A
-                println!("connect: {a:?} -> {corners:?} -> {b:?}");
+                //println!("connect: {a:?} -> {corners:?} -> {b:?}");
 
                 // join C-B-A and push back into queue
                 a.0.extend(corners);
