@@ -1,40 +1,39 @@
-use num_traits::Float;
+use geo_types::{Coord, CoordFloat, Line};
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct Point<T: Float>(pub T, pub T);
+// Coord extension trait
+pub trait CoordExt<T: CoordFloat> {
+    fn yx(self) -> Self;
+    fn manhattan_dist(&self, other: &Self) -> T;
+}
 
-impl<T: Float> Point<T> {
-    fn slope(&self, other: &Self) -> T {
-        (self.1 - other.1) / (other.0 - self.0)
+impl<T: CoordFloat> CoordExt<T> for Coord<T> {
+    fn yx(self) -> Self {
+        (self.y, self.x).into()
     }
 
-    fn yx(&self) -> Self {
-        Self(self.1, self.0)
-    }
-
-    pub fn dist_manhattan(&self, other: &Self) -> T {
-        (self.0 - other.0).abs() + (self.1 - other.1).abs()
+    fn manhattan_dist(&self, other: &Self) -> T {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
     }
 }
 
-impl<T: Float> From<(T, T)> for Point<T> {
-    fn from(p: (T, T)) -> Self {
-        Point(p.0, p.1)
-    }
+// Line extension trait
+pub trait LineExt<T: CoordFloat> {
+    fn intersection(&self, other: &Line<T>) -> Option<Coord<T>>;
+    fn is_vertical(&self) -> bool;
+    fn is_ortho(&self) -> bool;
+    fn swap_axes(self) -> Self;
+
+    #[allow(dead_code)]
+    fn reverse(self) -> Self;
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct Segment<T: Float>(pub Point<T>, pub Point<T>);
-
-impl<T: Float + std::fmt::Debug> Segment<T> {
-    pub fn new(a: impl Into<Point<T>>, b: impl Into<Point<T>>) -> Self {
-        Self(a.into(), b.into())
-    }
-
-    // Checks if line B intersects A, where A is orthogonal to X axis (vertical line).
+impl<T: CoordFloat> LineExt<T> for Line<T> {
+    // Checks if line B intersects A, where A (self) is axis-aligned line.
     // If the two lines share a same point, the result is None since clipping is not needed.
-    pub fn isect(&self, b: &Self) -> Option<Point<T>> {
+    fn intersection(&self, b: &Self) -> Option<Coord<T>> {
         let a = self;
+
+        // println!("isect: {a:?} -> {b:?}");
 
         if !a.is_ortho() {
             panic!("non-orthogonal A");
@@ -42,57 +41,56 @@ impl<T: Float + std::fmt::Debug> Segment<T> {
 
         // If A is not vertical line, invert axes
         if !a.is_vertical() {
+            // println!("invert");
             return a
                 .swap_axes()
-                .isect(&b.swap_axes())
+                .intersection(&b.swap_axes())
                 .and_then(|p| Some(p.yx()));
         }
 
         // Get X-axis differences
-        let diff_a = b.0 .0 - a.0 .0;
-        let diff_b = b.0 .0 - b.1 .0;
+        let c = Line::new(b.start, a.start);
+        let dx_c = c.dx();
+        let dx_b = b.dx();
 
-        // println!("diff_a={diff_a:?}, diff_b={diff_b:?}");
+        // println!("dx_c={dx_c:?}, dx_b={dx_b:?}");
 
-        // Check diff signatures
-        if diff_a.is_sign_positive() != diff_b.is_sign_positive() {
+        // Check delta signatures and distances
+        if dx_c.is_sign_positive() != dx_b.is_sign_positive() || dx_b.abs() <= dx_c.abs() {
             return None;
         }
 
-        // Check if B is directed toward A
-        let slope_a = b.0.slope(&a.0);
-        let slope_b = b.0.slope(&a.1);
-        let slope_c = b.0.slope(&b.1);
+        let d = Line::new(b.start, a.end);
 
-        // println!("slope_a={slope_a:?}, slope_b={slope_b:?}, slope_c={slope_c:?}");
+        // Check if B is directed toward A:
+        // Slope B must be in between of slopes C, D
+        let slope_b = b.slope();
+        let slope_c = c.slope();
+        let slope_d = d.slope();
 
-        if slope_c < slope_a.min(slope_b) || slope_c > slope_a.max(slope_b) {
+        // println!("slope_b={b:?}, slope_c={c:?}, slope_d={slope_d:?}");
+        if slope_b < slope_c.min(slope_d) || slope_b > slope_c.max(slope_d) {
             return None;
         }
 
-        // X-axis distance check
-        if diff_b.abs() <= diff_a.abs() {
-            return None;
-        }
-
-        Some(Point(b.0 .0 - diff_a, b.0 .1 + diff_a * slope_c))
+        Some(b.start + (dx_c, dx_c * slope_b).into())
     }
 
     fn is_vertical(&self) -> bool {
-        self.0 .0 == self.1 .0
+        self.start.x == self.end.x
     }
 
     fn is_ortho(&self) -> bool {
-        self.0 .0 == self.1 .0 || self.0 .1 == self.1 .1
+        self.start.x == self.end.x || self.start.y == self.end.y
     }
 
-    fn swap_axes(&self) -> Self {
-        Self(self.0.yx(), self.1.yx())
+    fn swap_axes(self) -> Self {
+        Self::new(self.start.yx(), self.end.yx())
     }
 
     #[allow(dead_code)]
     fn reverse(self) -> Self {
-        Self(self.1, self.0)
+        Self::new(self.end, self.start)
     }
 }
 
@@ -101,48 +99,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_isect() {
+    fn test_intersection() {
         //  |
         // -x-
         //  |
-        let a = Segment::<f32>::new((0.0, -4.0), (0.0, 4.0));
-        let b = Segment::<f32>::new((1.0, 0.0), (-1.0, 0.0));
-        assert_eq!(a.isect(&b), Some(Point(0.0, 0.0)));
-        assert_eq!(a.isect(&b.reverse()), Some(Point(0.0, 0.0)));
+        let a = Line::new((0.0, -4.0), (0.0, 4.0));
+        let b = Line::new((1.0, 0.0), (-1.0, 0.0));
+        assert_eq!(a.intersection(&b), Some((0.0, 0.0).into()));
+        assert_eq!(a.intersection(&b.reverse()), Some((0.0, 0.0).into()));
 
         //  |/
         //  x
         // /|
-        let a = Segment::new((0.0, 0.0), (0.0, 4.0));
-        let b = Segment::new((-1.0, 0.0), (1.0, 4.0));
-        assert_eq!(a.isect(&b), Some(Point(0.0, 2.0)));
-        assert_eq!(a.isect(&b.reverse()), Some(Point(0.0, 2.0)));
+        let a = Line::new((0.0, 0.0), (0.0, 4.0));
+        let b = Line::new((-1.0, 0.0), (1.0, 4.0));
+        assert_eq!(a.intersection(&b), Some((0.0, 2.0).into()));
+        assert_eq!(a.intersection(&b.reverse()), Some((0.0, 2.0).into()));
 
         //   /
         // -x---
         // /
-        let a = Segment::new((0.0, 0.0), (4.0, 0.0));
-        let b = Segment::new((4.0, 1.0), (0.0, -1.0));
-        assert!(a.isect(&b).is_some());
-        assert!(a.isect(&b.reverse()).is_some());
+        let a = Line::new((0.0, 0.0), (4.0, 0.0));
+        let b = Line::new((4.0, 1.0), (0.0, -1.0));
+        assert!(a.intersection(&b).is_some());
+        assert!(a.intersection(&b.reverse()).is_some());
 
         //    |
         // ---x
         //
-        let a = Segment::new((0.0, 0.0), (4.0, 0.0));
-        let b = Segment::new((4.0, 4.0), (4.0, 0.0));
-        assert!(!a.isect(&b).is_some());
-        assert!(!a.isect(&b.reverse()).is_some());
+        let a = Line::new((0.0, 0.0), (4.0, 0.0));
+        let b = Line::new((4.0, 4.0), (4.0, 0.0));
+        assert!(!a.intersection(&b).is_some());
+        assert!(!a.intersection(&b.reverse()).is_some());
 
         // Non-intersecting tests
-        let a = Segment::new((0.0, 0.0), (0.0, 4.0));
-        let b = Segment::new((1.0, 1.0), (0.1, 1.0));
-        assert!(!a.isect(&b).is_some());
-        assert!(!a.isect(&b.reverse()).is_some());
+        let a = Line::new((0.0, 0.0), (0.0, 4.0));
+        let b = Line::new((1.0, 1.0), (0.1, 1.0));
+        assert!(!a.intersection(&b).is_some());
+        assert!(!a.intersection(&b.reverse()).is_some());
 
-        let a = Segment::new((0.0, 0.0), (0.0, 4.0));
-        let b = Segment::new((1.0, 1.0), (4.0, 4.0));
-        assert!(!a.isect(&b).is_some());
-        assert!(!a.isect(&b.reverse()).is_some());
+        let a = Line::new((0.0, 0.0), (0.0, 4.0));
+        let b = Line::new((1.0, 1.0), (4.0, 4.0));
+        assert!(!a.intersection(&b).is_some());
+        assert!(!a.intersection(&b.reverse()).is_some());
     }
 }
