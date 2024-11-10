@@ -36,6 +36,10 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
         self.contains_point(&s.0) && self.contains_point(&s.1)
     }
 
+    fn is_crossing(&self, s: &Segment<T>) -> bool {
+        !self.contains_point(&s.0) && !self.contains_point(&s.1)
+    }
+
     // Clips segment to this rectangle.
     pub fn clip_segment(&self, seg: &Segment<T>) -> Option<Segment<T>> {
         // Check if fully inside rect
@@ -51,7 +55,23 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
             .take(2);
 
         let p1 = isects.next();
-        let p2 = isects.next();
+        let mut p2 = isects.next();
+
+        // Line is crossing when both points are outside the rectangle.
+        let is_crossing = self.is_crossing(seg);
+
+        // Set p2 to None incase theyre the same point!
+        // This fixes segments crossing corner point.
+        if p1 == p2 {
+            if is_crossing {
+                // Segment is crossing rectangle by touching the corner point.
+                // This would produce a segment with same point twice and does not qualify as
+                // segment. Therefore let's return None.
+                return None;
+            } else {
+                p2 = None;
+            }
+        }
 
         match (p1, p2) {
             // Two intersections:
@@ -99,8 +119,7 @@ impl<T: Float + std::fmt::Debug> Rect<T> {
         // since we must assume first and last segments are connected.
         let seg_len = segments.len();
         let mut offset = 0;
-        for i in 0..seg_len {
-            // Check if we found a split point
+        for i in 0..segments.len() {
             if segments[i].1 != segments[(i + 1) % seg_len].0 {
                 offset = (i + 1) % seg_len;
                 break;
@@ -144,26 +163,48 @@ mod tests {
         let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
         // should be contained fully
-        let seg = Segment::new((0.0, 0.0), (1.0, 1.0));
-        assert!(rect.clip_segment(&seg).is_some());
+        assert!(rect
+            .clip_segment(&Segment::new((0.0, 0.0), (1.0, 1.0)))
+            .is_some());
+
+        // should be contained fully
+        assert!(rect
+            .clip_segment(&Segment::new((0.0, 0.0), (4.0, 4.0)))
+            .is_some());
 
         // should be clipped twice
-        let seg = Segment::new((-1.0, 1.0), (5.0, 1.0));
         assert_eq!(
-            rect.clip_segment(&seg),
+            rect.clip_segment(&Segment::new((-1.0, 1.0), (5.0, 1.0))),
             Some(Segment::new((0.0, 1.0), (4.0, 1.0)))
         );
 
         // should be clipped one time
-        let seg = Segment::new((1.0, 1.0), (1.0, 5.0));
         assert_eq!(
-            rect.clip_segment(&seg),
+            rect.clip_segment(&Segment::new((1.0, 1.0), (1.0, 5.0))),
             Some(Segment::new((1.0, 1.0), (1.0, 4.0)))
         );
 
+        // should be clipped one time
+        assert_eq!(
+            rect.clip_segment(&Segment::new((0.0, 0.0), (5.0, 5.0))),
+            Some(Segment::new((0.0, 0.0), (4.0, 4.0)))
+        );
+
         // should be left out
-        let seg = Segment::new((5.0, 5.0), (6.0, 6.0));
-        assert!(rect.clip_segment(&seg).is_none());
+        assert!(rect
+            .clip_segment(&Segment::new((5.0, 5.0), (6.0, 6.0)))
+            .is_none());
+
+        // corner-crossing case: should be left out
+        assert_eq!(
+            rect.clip_segment(&Segment::new((-1.0, 1.0), (1.0, -1.0))),
+            None
+        );
+
+        // cross corner other time with ever so slight nudge
+        assert!(rect
+            .clip_segment(&Segment::new((-1.0, 1.0), (1.01, -1.0)))
+            .is_some(),);
     }
 
     #[test]
