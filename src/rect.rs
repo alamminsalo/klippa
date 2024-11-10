@@ -15,10 +15,10 @@ pub struct Rect<T: CoordFloat> {
 impl<T: CoordFloat> Rect<T> {
     pub fn new(x0: T, y0: T, x1: T, y1: T) -> Self {
         let lines = [
-            Line::new((x0, y0), (x1, y0)),
-            Line::new((x1, y0), (x1, y1)),
-            Line::new((x1, y1), (x0, y1)),
-            Line::new((x0, y1), (x0, y0)),
+            Line::new((x0, y1), (x1, y1)),
+            Line::new((x1, y1), (x1, y0)),
+            Line::new((x1, y0), (x0, y0)),
+            Line::new((x0, y0), (x0, y1)),
         ];
 
         Self {
@@ -201,24 +201,42 @@ impl<T: CoordFloat> Rect<T> {
         f
     }
 
+    // Returns true if perimeter index a is closer to i than b
+    pub fn is_index_closer(&self, i: f64, mut a: f64, mut b: f64) -> bool {
+        println!("is_index_closer: i={i} -> a={a} b={b}");
+
+        // wrap points around
+        if a < i {
+            a += 4.0;
+        }
+        if b < i {
+            b += 4.0;
+        }
+
+        a < b
+    }
+
     // Returns corner nodes between given perimeter indexes
     pub fn corner_nodes_between(&self, a: f64, mut b: f64) -> Vec<Coord<T>> {
         // wrap around if b point is before a
         if b < a {
             b += 4.0;
         }
+        println!("nodes between: {a}, {b}");
 
         // truncate to indexes
-        let i = a as usize;
+        let i = a.ceil() as usize;
         let j = b as usize;
 
-        let mut res = Vec::with_capacity(4);
+        println!("a={a}, b={b}, i={i}, j={j}");
 
-        for i in i..j {
-            res.push(self.lines[i % 4].end);
-        }
-
-        res
+        (i..=j)
+            .map(|i| {
+                let c = self.lines[i % 4].start;
+                println!("push {i} -> {c:?}");
+                c
+            })
+            .collect()
     }
 }
 
