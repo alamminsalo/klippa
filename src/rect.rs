@@ -204,7 +204,7 @@ impl<T: CoordFloat> Rect<T> {
 
     // Returns true if perimeter index a is closer to i than b
     pub fn is_index_closer(&self, i: f64, mut a: f64, mut b: f64) -> bool {
-        println!("is_index_closer: i={i} -> a={a} b={b}");
+        // println!("is_index_closer: i={i} -> a={a} b={b}");
         // wrap points around
         if a < i {
             a += 4.0;
@@ -233,7 +233,7 @@ impl<T: CoordFloat> Rect<T> {
         (i..=j)
             .map(|i| {
                 let c = self.lines[i % 4].start;
-                println!("push {i} -> {c:?}");
+                // println!("push {i} -> {c:?}");
                 c
             })
             .collect()
