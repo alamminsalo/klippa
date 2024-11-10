@@ -251,6 +251,24 @@ mod tests {
             ]
         );
 
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((2.0, 4.0), (4.0, 2.0)),
+                Segment::new((4.0, 2.0), (2.0, 0.0))
+            ])
+            .len(),
+            1
+        );
+
+        assert_eq!(
+            rect.clip_segments(&vec![
+                Segment::new((2.0, 4.0), (6.0, 2.0)),
+                Segment::new((6.0, 2.0), (2.0, 0.0))
+            ])
+            .len(),
+            2
+        );
+
         // non-clipping segments
         assert!(rect
             .clip_segments(&vec![
