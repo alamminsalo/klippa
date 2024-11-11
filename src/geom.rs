@@ -1,9 +1,10 @@
-use geo_types::{Coord, CoordFloat, Line};
+use geo_types::{Coord, CoordFloat, Line, LineString};
 
 // Coord extension trait
 pub trait CoordExt<T: CoordFloat> {
     fn yx(self) -> Self;
     fn manhattan_dist(&self, other: &Self) -> T;
+    fn is_inside(&self, ls: &LineString<T>) -> bool;
 }
 
 impl<T: CoordFloat> CoordExt<T> for Coord<T> {
@@ -13,6 +14,11 @@ impl<T: CoordFloat> CoordExt<T> for Coord<T> {
 
     fn manhattan_dist(&self, other: &Self) -> T {
         (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
+
+    fn is_inside(&self, ls: &LineString<T>) -> bool {
+        let isect = Line::new((self.x, self.y), (self.x, self.y + T::infinity()));
+        ls.lines().filter_map(|l| isect.intersection(&l)).count() % 2 == 1
     }
 }
 

@@ -6,6 +6,7 @@ mod util;
 mod tests;
 
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
+use geom::CoordExt;
 use rect::Rect;
 
 // Abstraction over crate::rect::Rect for handling complex geo types.
@@ -105,19 +106,30 @@ impl<T: CoordFloat> ClipRect<T> {
     }
 
     fn clip_polygon(&self, g: &Polygon<T>) -> MultiPolygon<T> {
-        let exteriors = self.clip_polygon_ring(g.exterior());
-
-        //let interiors = g
-        //    .interiors()
-        //    .into_iter()
-        //    .filter_map(|ls| self.clip_polygon_ring(ls))
-        //    .collect::<Vec<LineString<T>>>();
-
-        // TODO: place inner rings to exteriors
-        exteriors
+        let mut polys: Vec<Polygon<T>> = self
+            .clip_polygon_ring(g.exterior())
             .into_iter()
             .map(|ls| Polygon::new(ls, vec![]))
-            .collect()
+            .collect();
+
+        // clip and place interiors to polys
+        if !polys.is_empty() {
+            g.interiors()
+                .into_iter()
+                .map(|ls| self.clip_polygon_ring(ls))
+                .flatten()
+                .for_each(|hole| {
+                    for ring in polys.iter_mut() {
+                        let is_inside = hole.0[0].is_inside(ring.exterior());
+                        if is_inside {
+                            ring.interiors_push(hole);
+                            break;
+                        }
+                    }
+                });
+        }
+
+        polys.into()
     }
 
     pub fn clip(&self, g: &Geometry<T>) -> Option<Geometry<T>> {

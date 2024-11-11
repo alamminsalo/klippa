@@ -147,3 +147,31 @@ fn test_poly_full_cover() {
         "MULTIPOLYGON(((0 4,4 4,4 0,0 0,0 4)))"
     );
 }
+
+#[test]
+fn test_poly_holes_rect() {
+    let rect = ClipRect::new(-1.0, -1.0, 5.0, 5.0);
+    let g = wkt!(POLYGON((0. 0.,4. 0.,4. 4.,0. 4.,0. 0.),(1. 1.,1. 2.9999999999999716,3. 2.9999999999999716,3. 1.,1. 1.)));
+
+    let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+    println!("{}", clip.to_wkt());
+
+    assert_eq!(
+        clip.to_wkt().to_string(),
+        "MULTIPOLYGON(((0 0,4 0,4 4,0 4,0 0),(1 1,1 2.9999999999999716,3 2.9999999999999716,3 1,1 1)))"
+    );
+}
+
+#[test]
+fn test_poly_holes_rect_clip() {
+    let rect = ClipRect::new(-1.0, 1.5, 5.0, 5.0);
+    let g = wkt!(POLYGON((0. 0.,4. 0.,4. 4.,0. 4.,0. 0.),(1. 1.,1. 2.9999999999999716,3. 2.9999999999999716,3. 1.,1. 1.)));
+
+    let clip = rect.clip(&Geometry::Polygon(g)).unwrap();
+    println!("{}", clip.to_wkt());
+
+    assert_eq!(
+        clip.to_wkt().to_string(),
+        "MULTIPOLYGON(((4 1.5,4 4,0 4,0 1.5,-1 1.5,-1 5,5 5,5 1.5,4 1.5)))"
+    );
+}

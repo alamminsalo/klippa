@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use geo::{coord, BooleanOps};
+use geo::{coord, wkt, BooleanOps};
 use geo_types::{line_string, polygon, Geometry, Line};
 use klippa::ClipRect;
 
@@ -46,15 +46,34 @@ fn polyclip_geo() {
     rect.intersection(&g);
 }
 
+fn polyclip_holes_klippa() {
+    let rect = ClipRect::new(1.5, 1.5, 5.0, 5.0);
+    let g = wkt!(POLYGON((0. 0.,4. 0.,4. 4.,0. 4.,0. 0.),(1. 1.,1. 2.9999999999999716,3. 2.9999999999999716,3. 1.,1. 1.)));
+    rect.clip(&Geometry::Polygon(g)).unwrap();
+}
+
+fn polyclip_holes_geo() {
+    let rect = ClipRect::new(1.5, 1.5, 5.0, 5.0);
+    let g = wkt!(POLYGON((0. 0.,4. 0.,4. 4.,0. 4.,0. 0.),(1. 1.,1. 2.9999999999999716,3. 2.9999999999999716,3. 1.,1. 1.)));
+    rect.clip(&Geometry::Polygon(g)).unwrap();
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("lineclip_klippa", |b| b.iter(|| lineclip_klippa()));
     c.bench_function("lineclip_geo", |b| b.iter(|| lineclip_geo()));
+
     c.bench_function("linestringclip_klippa", |b| {
         b.iter(|| linestringclip_klippa())
     });
     c.bench_function("linestringclip_geo", |b| b.iter(|| linestringclip_geo()));
+
     c.bench_function("polyclip_klippa", |b| b.iter(|| polyclip_klippa()));
     c.bench_function("polyclip_geo", |b| b.iter(|| polyclip_geo()));
+
+    c.bench_function("polyclip_holes_klippa", |b| b.iter(|| polyclip_klippa()));
+    c.bench_function("polyclip_holes_holes_geo", |b| {
+        b.iter(|| polyclip_holes_geo())
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);
