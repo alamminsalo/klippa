@@ -28,9 +28,6 @@ pub trait LineExt<T: CoordFloat> {
     fn is_vertical(&self) -> bool;
     fn is_ortho(&self) -> bool;
     fn swap_axes(self) -> Self;
-
-    #[allow(dead_code)]
-    fn reverse(self) -> Self;
 }
 
 impl<T: CoordFloat> LineExt<T> for Line<T> {
@@ -93,9 +90,20 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
     fn swap_axes(self) -> Self {
         Self::new(self.start.yx(), self.end.yx())
     }
+}
 
-    #[allow(dead_code)]
+pub trait Reverse<T: CoordFloat> {
+    fn reverse(self) -> Self;
+}
+
+impl<T: CoordFloat> Reverse<T> for Line<T> {
     fn reverse(self) -> Self {
         Self::new(self.end, self.start)
+    }
+}
+
+impl<T: CoordFloat> Reverse<T> for LineString<T> {
+    fn reverse(self) -> Self {
+        Self::new(self.0.into_iter().rev().collect())
     }
 }
