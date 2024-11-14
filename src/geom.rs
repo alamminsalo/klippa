@@ -117,7 +117,7 @@ pub trait PolygonExt<T: CoordFloat> {
 impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
     fn put_hole(&mut self, ls: LineString<T>, rect: &Rect<T>) {
         if ls.is_closed() {
-            println!("closed ring");
+            //println!("closed ring");
             self.interiors_push(ls);
         } else {
             // assume hole is cut
@@ -128,12 +128,12 @@ impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
                     .corner_nodes_between(rect.perimeter_index(&start), rect.perimeter_index(&end))
                     .len();
 
-                println!("{start:?} -> {end:?} corners={num_corners}");
+                //println!("{start:?} -> {end:?} corners={num_corners}");
 
                 for i in 0..ext.0.len() - 1 {
                     let line = Line::new(ext.0[i], ext.0[i + 1]);
                     if line.is_ortho() && start.x == line.start.x || start.y == line.start.y {
-                        println!("rect line={line:?}");
+                        //println!("rect line={line:?}");
                         // place linestring between coordinates
                         let (l, r) = ext.0.split_at(i + 1);
                         ext.0 = l

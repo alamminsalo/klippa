@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use geo::{coord, wkt, BooleanOps};
+use geo::{coord, wkt, BooleanOps, Rect};
 use geo_types::{line_string, polygon, Geometry, Line};
 use klippa::ClipRect;
 
@@ -11,7 +11,7 @@ fn lineclip_klippa() {
 }
 
 fn lineclip_geo() {
-    let rect = geo::Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
+    let rect = Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
     let g = Line::new((0.0, 0.0), (5.0, 5.0));
     rect.clip(&g.into(), false);
 }
@@ -26,7 +26,7 @@ fn linestringclip_klippa() {
 }
 
 fn linestringclip_geo() {
-    let rect = geo::Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
+    let rect = Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
     let g = line_string![
         (x: -1.0, y: 2.0), (x: 1.0, y:2.0),
         (x: 1.0, y: 2.0), (x: 5.0, y: 2.0)
@@ -41,7 +41,7 @@ fn polyclip_klippa() {
 }
 
 fn polyclip_geo() {
-    let rect = geo::Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
+    let rect = Rect::new(coord! {x: 0., y: 0.}, coord! {x: 4., y: 4.}).to_polygon();
     let g = polygon![(x: 1.0, y: 1.0), (x: 5.0, y: 5.0)];
     rect.intersection(&g);
 }
@@ -53,9 +53,9 @@ fn polyclip_holes_klippa() {
 }
 
 fn polyclip_holes_geo() {
-    let rect = ClipRect::new(1.5, 1.5, 5.0, 5.0);
+    let rect = Rect::new(coord! {x: 1.5, y: 1.5}, coord! {x: 5., y: 5.}).to_polygon();
     let g = wkt!(POLYGON((0. 0.,4. 0.,4. 4.,0. 4.,0. 0.),(1. 1.,1. 2.9999999999999716,3. 2.9999999999999716,3. 1.,1. 1.)));
-    rect.clip(&Geometry::Polygon(g)).unwrap();
+    rect.intersection(&g);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -70,7 +70,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("polyclip_klippa", |b| b.iter(|| polyclip_klippa()));
     c.bench_function("polyclip_geo", |b| b.iter(|| polyclip_geo()));
 
-    c.bench_function("polyclip_holes_klippa", |b| b.iter(|| polyclip_klippa()));
+    c.bench_function("polyclip_holes_klippa", |b| {
+        b.iter(|| polyclip_holes_klippa())
+    });
     c.bench_function("polyclip_holes_holes_geo", |b| {
         b.iter(|| polyclip_holes_geo())
     });
