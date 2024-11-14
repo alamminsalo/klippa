@@ -160,12 +160,12 @@ fn test_perimeter_index() {
     let rect = Rect::new(0.0, 0.0, 4.0, 4.0);
 
     // test perimeter index for coordinates
-    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 0.0,);
-    assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 4.0}), 0.75);
-    assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 0.0}), 2.0,);
-    assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 0.0}), 2.5);
-    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 3.0,);
-    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 3.0}), 3.75,);
+    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 0.0}), 0.0,);
+    assert_eq!(rect.perimeter_index(&coord! {x: 3.0, y: 0.0}), 0.75);
+    assert_eq!(rect.perimeter_index(&coord! {x: 4.0, y: 0.0}), 1.0,);
+    assert_eq!(rect.perimeter_index(&coord! {x: 2.0, y: 0.0}), 0.5);
+    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 4.0}), 3.0,);
+    assert_eq!(rect.perimeter_index(&coord! {x: 0.0, y: 1.0}), 3.75,);
 
     // test finding corner nodes between indexes
     assert_eq!(rect.corner_nodes_between(0.1, 1.1).len(), 1);
