@@ -6,7 +6,7 @@ mod util;
 mod tests;
 
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
-use geom::{CoordExt, Reverse};
+use geom::{CoordExt, PolygonExt};
 use rect::Rect;
 
 // Abstraction over crate::rect::Rect for handling complex geo types.
@@ -116,15 +116,13 @@ impl<T: CoordFloat> ClipRect<T> {
         if !polys.is_empty() {
             g.interiors()
                 .into_iter()
-                .map(|ls| self.clip_polygon_ring(&ls.clone().reverse()))
+                .map(|ls| self.clip_linestring(ls))
                 .flatten()
                 .for_each(|hole| {
-                    for ring in polys.iter_mut() {
+                    for poly in polys.iter_mut() {
                         if let Some(c) = util::find_coord_inside(&hole, &self.inner) {
-                            let is_inside = c.is_inside(ring.exterior());
-                            if is_inside {
-                                //println!("push hole");
-                                ring.interiors_push(hole.reverse());
+                            if c.is_inside(poly.exterior()) {
+                                poly.put_hole(hole, &self.inner);
                                 break;
                             }
                         }

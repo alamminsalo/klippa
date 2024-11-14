@@ -1,4 +1,6 @@
-use geo_types::{Coord, CoordFloat, Line, LineString};
+use geo_types::{Coord, CoordFloat, Line, LineString, Polygon};
+
+use crate::rect::Rect;
 
 // Coord extension trait
 pub trait CoordExt<T: CoordFloat> {
@@ -105,5 +107,46 @@ impl<T: CoordFloat> Reverse<T> for Line<T> {
 impl<T: CoordFloat> Reverse<T> for LineString<T> {
     fn reverse(self) -> Self {
         Self::new(self.0.into_iter().rev().collect())
+    }
+}
+
+pub trait PolygonExt<T: CoordFloat> {
+    fn put_hole(&mut self, ls: LineString<T>, rect: &Rect<T>);
+}
+
+impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
+    fn put_hole(&mut self, ls: LineString<T>, rect: &Rect<T>) {
+        if ls.is_closed() {
+            println!("closed ring");
+            self.interiors_push(ls);
+        } else {
+            // assume hole is cut
+            self.exterior_mut(|ext| {
+                let start = ls.0[0];
+                let end = ls.0[ls.0.len() - 1];
+                let num_corners = rect
+                    .corner_nodes_between(rect.perimeter_index(&start), rect.perimeter_index(&end))
+                    .len();
+
+                println!("{start:?} -> {end:?} corners={num_corners}");
+
+                for i in 0..ext.0.len() - 1 {
+                    let line = Line::new(ext.0[i], ext.0[i + 1]);
+                    if line.is_ortho() && start.x == line.start.x || start.y == line.start.y {
+                        println!("rect line={line:?}");
+                        // place linestring between coordinates
+                        let (l, r) = ext.0.split_at(i + 1);
+                        ext.0 = l
+                            .iter()
+                            .chain(&ls.0)
+                            .chain(&r[num_corners..])
+                            .copied()
+                            .collect();
+
+                        break;
+                    }
+                }
+            });
+        }
     }
 }
