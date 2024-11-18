@@ -1,8 +1,8 @@
 use crate::*;
 use geo::BoundingRect;
-use geo_types::{MultiPolygon, Polygon};
-use std::{collections::HashMap, fs::File, sync::OnceLock};
-use wkt::{ToWkt, TryFromWkt};
+use geo_types::Polygon;
+use std::fs::File;
+use wkt::TryFromWkt;
 
 pub fn get_wkt(id: &str) -> (ClipRect<f64>, Geometry) {
     let csv_path = "./assets/test/wkt.csv";
