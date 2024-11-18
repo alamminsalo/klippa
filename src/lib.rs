@@ -7,6 +7,7 @@ mod tests;
 
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use geom::{CoordExt, Reverse};
+use log::debug;
 use rect::Rect;
 
 // Abstraction over crate::rect::Rect for handling complex geo types.
@@ -44,6 +45,7 @@ impl<T: CoordFloat> ClipRect<T> {
         // When no intersections are found, check if clipping rectangle is fully contained by the
         // subject polygon. In that case, bounds of the clipping rectangle.
         if queue.is_empty() && self.inner.is_contained(&input_lines) {
+            debug!("clipping rect inside geom");
             return vec![util::segments_to_linestring(self.inner.lines.to_vec())];
         }
 
@@ -54,20 +56,21 @@ impl<T: CoordFloat> ClipRect<T> {
         let mut output = vec![];
 
         while !queue.is_empty() {
-            //println!("step");
+            debug!("step");
             //util::print_queue(&queue);
 
             // pop last element of the vector, containing the smallest perimeter index
             let (p_a, mut a) = queue.pop().unwrap();
 
             if a.is_closed() {
+                debug!("push");
                 output.push(a);
                 continue;
             }
 
             // Check if head point of a is closer than next in queue
             let p_tail = self.inner.perimeter_index(&a.0.last().unwrap());
-            //println!("p_tail={p_tail}");
+            debug!("p_tail={p_tail}");
 
             // Find next value with greater perimeter index than the p_tail
             if let Some(next) = queue
@@ -78,12 +81,12 @@ impl<T: CoordFloat> ClipRect<T> {
                 .map(|(idx, _)| idx)
             {
                 let (p_b, b) = queue.remove(next);
-                //println!("join lines {p_b}, {b:?}");
+                debug!("join lines {p_b}, {b:?}");
                 // create a new segment passed from corner nodes
                 let corners = self.inner.corner_nodes_between(p_tail, p_b);
 
                 // connect last point of C to first point of A
-                //println!("connect: {a:?} -> {corners:?} -> {b:?}");
+                debug!("connect: {a:?} -> {corners:?} -> {b:?}");
 
                 // join C-B-A and push back into queue
                 a.0.extend(corners);
@@ -92,7 +95,7 @@ impl<T: CoordFloat> ClipRect<T> {
                 queue.push((p_a, a));
             } else {
                 // Close line with self
-                //println!("close line {p_a} -> {p_tail}");
+                debug!("close line {p_a} -> {p_tail}");
 
                 let corners = self.inner.corner_nodes_between(p_tail, p_a);
                 a.0.extend(corners);
@@ -102,6 +105,7 @@ impl<T: CoordFloat> ClipRect<T> {
             }
         }
 
+        debug!("out");
         output
     }
 
@@ -119,11 +123,21 @@ impl<T: CoordFloat> ClipRect<T> {
                 .map(|ls| self.clip_polygon_ring(&ls.clone().reverse()))
                 .flatten()
                 .for_each(|hole| {
-                    for poly in polys.iter_mut() {
-                        if let Some(c) = util::find_coord_inside(&hole, &self.inner) {
-                            if c.is_inside(poly.exterior()) {
-                                poly.interiors_push(hole.reverse());
-                                break;
+                    debug!("hole");
+
+                    if polys.len() == 1 {
+                        // single poly -> no need to find
+                        polys[0].interiors_push(hole.reverse());
+                    } else {
+                        // find parent poly
+                        for poly in polys.iter_mut() {
+                            if let Some(c) = util::find_coord_inside(&hole, &self.inner) {
+                                debug!("coord inside");
+                                if c.is_inside(poly.exterior()) {
+                                    debug!("is inside");
+                                    poly.interiors_push(hole.reverse());
+                                    break;
+                                }
                             }
                         }
                     }
@@ -144,6 +158,8 @@ impl<T: CoordFloat> ClipRect<T> {
                 let g = self.clip_polygon(g);
                 if g.0.is_empty() {
                     None
+                } else if g.0.len() == 1 {
+                    Some(Polygon(g.into_iter().next().unwrap()))
                 } else {
                     Some(MultiPolygon(g))
                 }

@@ -1,5 +1,6 @@
 use crate::geom::{CoordExt, LineExt};
 use geo_types::{Coord, CoordFloat, Line, Point};
+use log::debug;
 
 pub struct Rect<T: CoordFloat> {
     // bounding coordinates
@@ -14,7 +15,12 @@ pub struct Rect<T: CoordFloat> {
 
 impl<T: CoordFloat> Rect<T> {
     pub fn new(x0: T, y0: T, x1: T, y1: T) -> Self {
-        // counter-clockwise
+        debug!("{x0:?},{y0:?},{x1:?},{y1:?}");
+
+        // make sure to wind lines counter-clockwise
+        //let (x0, x1) = (x0.min(x1), x0.max(x1));
+        //let (y0, y1) = (y0.min(y1), y0.max(y1));
+
         let lines = [
             Line::new((x0, y0), (x1, y0)),
             Line::new((x1, y0), (x1, y1)),
@@ -42,6 +48,10 @@ impl<T: CoordFloat> Rect<T> {
 
     fn contains_coord(&self, c: &Coord<T>) -> bool {
         self.x0 <= c.x && c.x <= self.x1 && self.y0 <= c.y && c.y <= self.y1
+    }
+
+    pub fn coord_inside(&self, c: &Coord<T>) -> bool {
+        self.x0 < c.x && c.x < self.x1 && self.y0 < c.y && c.y < self.y1
     }
 
     fn contains_segment(&self, s: &Line<T>) -> bool {
@@ -176,6 +186,7 @@ impl<T: CoordFloat> Rect<T> {
 
     // Indexes a point along the rect perimeter in 0..4
     // Can be used to sort intersection points.
+    // Returns -1.0 on points not on perimeter.
     pub fn perimeter_index(&self, p: &Coord<T>) -> f64 {
         let mut f: f64 = 0.0;
         let corners = self.corner_points();
@@ -204,7 +215,7 @@ impl<T: CoordFloat> Rect<T> {
 
     // Returns true if perimeter index a is closer to i than b
     pub fn is_index_closer(&self, i: f64, mut a: f64, mut b: f64) -> bool {
-        //println!("is_index_closer: i={i} -> a={a} b={b}");
+        debug!("is_index_closer: i={i} -> a={a} b={b}");
         // wrap points around
         if a < i {
             a += 4.0;
@@ -222,18 +233,17 @@ impl<T: CoordFloat> Rect<T> {
         if b < a {
             b += 4.0;
         }
-        //println!("nodes between: {a}, {b}");
+        debug!("nodes between: {a}, {b}");
 
         // truncate to indexes
         let i = a.ceil() as usize;
         let j = b as usize;
-
-        //println!("a={a}, b={b}, i={i}, j={j}");
+        debug!("a={a}, b={b}, i={i}, j={j}");
 
         (i..=j)
             .map(|i| {
                 let c = self.lines[i % 4].start;
-                // println!("push {i} -> {c:?}");
+                // debug!("push {i} -> {c:?}");
                 c
             })
             .collect()

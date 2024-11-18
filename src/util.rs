@@ -17,13 +17,11 @@ pub(crate) fn segments_to_linestring<T: CoordFloat>(mut segments: Vec<Line<T>>) 
 }
 
 #[inline]
-pub(crate) fn find_coord_inside<T: CoordFloat>(
-    ls: &LineString<T>,
+pub(crate) fn find_coord_inside<'a, T: CoordFloat>(
+    ls: &'a LineString<T>,
     rect: &Rect<T>,
-) -> Option<Coord<T>> {
-    ls.0.iter()
-        .find(|c| rect.x0 < c.x && c.x < rect.x1 && rect.y0 < c.y && c.y < rect.y1)
-        .copied()
+) -> Option<&'a Coord<T>> {
+    ls.0.iter().find(|c| rect.coord_inside(c))
 }
 
 #[allow(dead_code)]

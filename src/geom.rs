@@ -1,6 +1,6 @@
-use geo_types::{Coord, CoordFloat, Line, LineString, Polygon};
-
 use crate::rect::Rect;
+use geo_types::{Coord, CoordFloat, Line, LineString, Polygon};
+use log::debug;
 
 // Coord extension trait
 pub trait CoordExt<T: CoordFloat> {
@@ -19,8 +19,8 @@ impl<T: CoordFloat> CoordExt<T> for Coord<T> {
     }
 
     fn is_inside(&self, ls: &LineString<T>) -> bool {
-        let isect = Line::new((self.x, self.y), (self.x, self.y + T::infinity()));
-        ls.lines().filter_map(|l| isect.intersection(&l)).count() % 2 == 1
+        let ix = Line::new((self.x, self.y), (T::infinity(), self.y));
+        ls.lines().filter_map(|l| ix.intersection(&l)).count() % 2 == 1
     }
 }
 
@@ -38,7 +38,7 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
     fn intersection(&self, b: &Self) -> Option<Coord<T>> {
         let a = self;
 
-        // println!("isect: {a:?} -> {b:?}");
+        debug!("isect: {a:?} -> {b:?}");
 
         if !a.is_ortho() {
             panic!("non-orthogonal A");
@@ -46,7 +46,7 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
 
         // If A is not vertical line, invert axes
         if !a.is_vertical() {
-            // println!("invert");
+            debug!("invert");
             return a
                 .swap_axes()
                 .intersection(&b.swap_axes())
@@ -58,7 +58,7 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
         let dx_c = c.dx();
         let dx_b = b.dx();
 
-        // println!("dx_c={dx_c:?}, dx_b={dx_b:?}");
+        debug!("dx_c={dx_c:?}, dx_b={dx_b:?}");
 
         // Check delta signatures and distances
         if dx_c.is_sign_positive() != dx_b.is_sign_positive() || dx_b.abs() <= dx_c.abs() {
@@ -73,7 +73,7 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
         let slope_c = c.slope();
         let slope_d = d.slope();
 
-        // println!("slope_b={b:?}, slope_c={c:?}, slope_d={slope_d:?}");
+        debug!("slope_b={b:?}, slope_c={c:?}, slope_d={slope_d:?}");
         if slope_b < slope_c.min(slope_d) || slope_b > slope_c.max(slope_d) {
             return None;
         }
@@ -117,7 +117,7 @@ pub trait PolygonExt<T: CoordFloat> {
 impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
     fn put_hole(&mut self, ls: LineString<T>, rect: &Rect<T>) {
         if ls.is_closed() {
-            //println!("closed ring");
+            debug!("closed ring");
             self.interiors_push(ls);
         } else {
             // assume hole is cut
@@ -128,12 +128,12 @@ impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
                     .corner_nodes_between(rect.perimeter_index(&start), rect.perimeter_index(&end))
                     .len();
 
-                //println!("{start:?} -> {end:?} corners={num_corners}");
+                debug!("{start:?} -> {end:?} corners={num_corners}");
 
                 for i in 0..ext.0.len() - 1 {
                     let line = Line::new(ext.0[i], ext.0[i + 1]);
                     if line.is_ortho() && start.x == line.start.x || start.y == line.start.y {
-                        //println!("rect line={line:?}");
+                        debug!("rect line={line:?}");
                         // place linestring between coordinates
                         let (l, r) = ext.0.split_at(i + 1);
                         ext.0 = l
