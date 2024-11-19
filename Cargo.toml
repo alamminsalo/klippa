@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2021"
 description = "Geometry clipper using rectangular window"
 license = "MIT"
+repository = "https://github.com/alamminsalo/klippa"
 
 [dependencies]
 geo-types = "0.7.13"
