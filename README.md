@@ -1,4 +1,4 @@
-# Klippa 🚀
+# Klippa ✂️
 
 Klippa is a high-performance Rust library for clipping geometries using a rectangular window. It is designed for speed and efficiency, making it ideal for projects requiring fast spatial operations.
 
