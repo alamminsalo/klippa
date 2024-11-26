@@ -11,6 +11,12 @@ fn test_intersection() {
     assert_eq!(a.intersection(&b), Some((0.0, 0.0).into()));
     assert_eq!(a.intersection(&b.reverse()), Some((0.0, 0.0).into()));
 
+    //==-x-==
+    // let a = Line::new((0.0, 0.0), (4.0, 0.0));
+    // let b = Line::new((-1.0, 0.0), (5.0, 0.0));
+    // assert!(a.intersection(&b).is_none());
+    // assert!(a.intersection(&b.reverse()).is_none());
+
     //  |/
     //  x
     // /|

@@ -245,13 +245,21 @@ impl<T: CoordFloat> Rect<T> {
     }
 
     pub fn is_contained(&self, lines: &[Line<T>]) -> bool {
-        let isect = Line::new((self.x0, self.y0), (self.x0, self.y0 + T::infinity()));
+        let beam_x = Line::new((self.x0, self.y0), (T::infinity(), self.y0));
+        let beam_y = Line::new((self.x0, self.y0), (self.x0, T::infinity()));
 
-        lines
+        let isects_x = lines
             .into_iter()
-            .filter_map(|l| isect.intersection(l))
-            .count()
-            % 2
-            == 1
+            .filter_map(|l| beam_x.intersection(l))
+            .count();
+
+        let isects_y = lines
+            .into_iter()
+            .filter_map(|l| beam_y.intersection(l))
+            .count();
+
+        //println!("isects={isects}");
+
+        (isects_x % 2 == 1) && (isects_y % 2 == 1)
     }
 }

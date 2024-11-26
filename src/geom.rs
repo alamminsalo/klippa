@@ -53,6 +53,12 @@ impl<T: CoordFloat> LineExt<T> for Line<T> {
                 .and_then(|p| Some(p.yx()));
         }
 
+        // Check if B is also vertical:
+        // Overlapping lines are not defined to be intersections.
+        if b.is_vertical() {
+            return None;
+        }
+
         // Get X-axis differences
         let c = Line::new(b.start, a.start);
         let dx_c = c.dx();
