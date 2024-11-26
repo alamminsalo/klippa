@@ -30,3 +30,8 @@ pub(crate) fn print_queue<T: CoordFloat>(queue: &Vec<(f64, LineString<T>)>) {
         println!("p_idx={p_idx}, {ls:?}");
     }
 }
+
+#[inline(always)]
+pub fn rough_eq<T: CoordFloat>(a: T, b: T) -> bool {
+    (a - b).abs() <= T::from(0.00001).unwrap()
+}

@@ -19,7 +19,7 @@ impl<T: CoordFloat> CoordExt<T> for Coord<T> {
     }
 
     fn is_inside(&self, ls: &LineString<T>) -> bool {
-        let ix = Line::new((self.x, self.y), (T::infinity(), self.y));
+        let ix = Line::new((self.x, self.y), (self.x, T::infinity()));
         ls.lines().filter_map(|l| ix.intersection(&l)).count() % 2 == 1
     }
 }

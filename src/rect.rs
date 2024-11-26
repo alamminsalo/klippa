@@ -1,4 +1,5 @@
 use crate::geom::{CoordExt, LineExt};
+use crate::util::rough_eq;
 use geo_types::{Coord, CoordFloat, Line, Point};
 use log::debug;
 
@@ -196,12 +197,12 @@ impl<T: CoordFloat> Rect<T> {
             let c2 = corners[(i + 1) % 4];
 
             if i % 2 == 0 {
-                if p.y == c1.y {
+                if rough_eq(p.y, c1.y) {
                     f += (p.x - c1.x).to_f64().unwrap() / (c2.x - c1.x).to_f64().unwrap();
                     break;
                 }
             } else {
-                if p.x == c1.x {
+                if rough_eq(p.x, c1.x) {
                     f += (p.y - c1.y).to_f64().unwrap() / (c2.y - c1.y).to_f64().unwrap();
                     break;
                 }
@@ -240,13 +241,7 @@ impl<T: CoordFloat> Rect<T> {
         let j = b as usize;
         debug!("a={a}, b={b}, i={i}, j={j}");
 
-        (i..=j)
-            .map(|i| {
-                let c = self.lines[i % 4].start;
-                // debug!("push {i} -> {c:?}");
-                c
-            })
-            .collect()
+        (i..=j).map(|i| self.lines[i % 4].start).collect()
     }
 
     pub fn is_contained(&self, lines: &[Line<T>]) -> bool {
