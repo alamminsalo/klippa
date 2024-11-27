@@ -1,5 +1,5 @@
-use crate::*;
-use geo_types::coord;
+use geo_types::{coord, Line};
+use klippa::*;
 
 #[test]
 fn test_clip_single() {

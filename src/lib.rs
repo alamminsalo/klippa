@@ -2,13 +2,10 @@ pub mod geom;
 pub mod rect;
 mod util;
 
-#[cfg(test)]
-mod tests;
-
 use geo_types::{CoordFloat, Geometry, Line, LineString, MultiLineString, MultiPolygon, Polygon};
 use geom::{CoordExt, Reverse};
 use log::debug;
-use rect::Rect;
+pub use rect::Rect;
 
 // Abstraction over crate::rect::Rect for handling complex geo types.
 pub struct ClipRect<T: CoordFloat> {

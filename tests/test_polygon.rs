@@ -1,5 +1,5 @@
-use crate::*;
-use geo::{orient::Direction, wkt, Orient};
+use geo::{orient::Direction, wkt, Geometry, Orient};
+use klippa::*;
 use wkt::ToWkt;
 
 #[test]

@@ -1,5 +1,5 @@
-use crate::geom::*;
 use geo_types::Line;
+use klippa::geom::*;
 
 #[test]
 fn test_intersection() {

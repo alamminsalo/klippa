@@ -1,6 +1,6 @@
-use crate::*;
 use geo::BoundingRect;
-use geo_types::Polygon;
+use geo_types::{Geometry, Polygon};
+use klippa::*;
 use std::fs::File;
 use wkt::TryFromWkt;
 
