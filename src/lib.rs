@@ -54,7 +54,7 @@ impl<T: CoordFloat> ClipRect<T> {
 
         while !queue.is_empty() {
             debug!("step");
-            //util::print_queue(&queue);
+            util::print_queue(&queue);
 
             // pop last element of the vector, containing the smallest perimeter index
             let (p_a, mut a) = queue.pop().unwrap();

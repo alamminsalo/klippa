@@ -19,8 +19,13 @@ impl<T: CoordFloat> CoordExt<T> for Coord<T> {
     }
 
     fn is_inside(&self, ls: &LineString<T>) -> bool {
-        let ix = Line::new((self.x, self.y), (self.x, T::infinity()));
-        ls.lines().filter_map(|l| ix.intersection(&l)).count() % 2 == 1
+        let ix = Line::new((self.x, self.y), (T::infinity(), self.y));
+        let iy = Line::new((self.x, self.y), (self.x, T::infinity()));
+
+        let isects_x = ls.lines().filter_map(|l| ix.intersection(&l)).count();
+        let isects_y = ls.lines().filter_map(|l| iy.intersection(&l)).count();
+
+        isects_x % 2 > 0 || isects_y % 2 > 0
     }
 }
 
@@ -126,6 +131,7 @@ impl<T: CoordFloat> PolygonExt<T> for Polygon<T> {
             debug!("closed ring");
             self.interiors_push(ls);
         } else {
+            // TODO this does not work
             // assume hole is cut
             self.exterior_mut(|ext| {
                 let start = ls.0[0];

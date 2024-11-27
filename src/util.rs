@@ -1,4 +1,5 @@
 use geo_types::{Coord, CoordFloat, Line, LineString};
+use log::debug;
 
 use crate::rect::Rect;
 
@@ -24,10 +25,9 @@ pub(crate) fn find_coord_inside<'a, T: CoordFloat>(
     ls.0.iter().find(|c| rect.coord_inside(c))
 }
 
-#[allow(dead_code)]
 pub(crate) fn print_queue<T: CoordFloat>(queue: &Vec<(f64, LineString<T>)>) {
     for (p_idx, ls) in queue.into_iter().rev() {
-        println!("p_idx={p_idx}, {ls:?}");
+        debug!("p_idx={p_idx}, {ls:?}");
     }
 }
 
