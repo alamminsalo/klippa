@@ -150,7 +150,16 @@ impl<T: CoordFloat> ClipRect<T> {
         match g {
             Point(g) => self.inner.clip_point(g).and_then(|p| Some(Point(p))),
             Line(g) => self.inner.clip_segment(g).and_then(|l| Some(Line(l))),
-            LineString(g) => Some(MultiLineString(self.clip_linestring(g))),
+            LineString(g) => {
+                let g = self.clip_linestring(g);
+                if g.0.is_empty() {
+                    None
+                } else if g.0.len() == 1 {
+                    Some(LineString(g.into_iter().next().unwrap()))
+                } else {
+                    Some(MultiLineString(g))
+                }
+            }
             Polygon(g) => {
                 let g = self.clip_polygon(g);
                 if g.0.is_empty() {
