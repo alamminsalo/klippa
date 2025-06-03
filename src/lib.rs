@@ -110,7 +110,13 @@ impl<T: CoordFloat> ClipRect<T> {
         let mut polys: Vec<Polygon<T>> = self
             .clip_polygon_ring(g.exterior())
             .into_iter()
-            .map(|ls| Polygon::new(ls, vec![]))
+            .filter_map(|ls| {
+                if ls.points().len() >= 3 {
+                    Some(Polygon::new(ls, vec![]))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         // clip and place interiors to polys
@@ -119,9 +125,14 @@ impl<T: CoordFloat> ClipRect<T> {
                 .into_iter()
                 .map(|ls| self.clip_polygon_ring(&ls.clone().reverse()))
                 .flatten()
+                .filter_map(|ls| {
+                    if ls.points().len() >= 3 {
+                        Some(ls)
+                    } else {
+                        None
+                    }
+                })
                 .for_each(|hole| {
-                    debug!("hole");
-
                     if polys.len() == 1 {
                         // single poly -> no need to find
                         polys[0].interiors_push(hole.reverse());
